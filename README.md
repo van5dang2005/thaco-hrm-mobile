@@ -15,11 +15,42 @@ Yêu cầu: Node 20+, Android Studio (emulator) và/hoặc **Xcode ≥ 26.4** (x
 
 ```bash
 npm install
-cp .env.example .env.local     # chỉnh URL back-end nếu không dùng mock
+npm run env:pull               # tải biến môi trường development từ expo.dev về .env
 npm run mock:api               # mock cả hai back-end ở :4001 (bưu phẩm) và :4002 (phòng họp)
-npx expo start                 # Metro
+npm start                      # Metro
 npm run android                # build + cài development build lên emulator / máy thật
 ```
+
+### Cấu hình và môi trường
+
+Cấu hình app nằm ở `app.config.ts`. Biến môi trường được quản lý trên **expo.dev** (EAS environment variables, ba môi trường development / preview / production). Ở máy dev chỉ có **một file `.env`** (git bỏ qua), được ghi đè mỗi lần pull.
+
+| Biến | Ý nghĩa |
+|---|---|
+| `APP_ENV` | development / preview / production; đổi tên app thành "THACO HRM (Dev)" / "(Preview)" / "THACO HRM". Khi build, `eas.json` tự đặt theo profile |
+| `EXPO_PUBLIC_PARCEL_API_URL`, `EXPO_PUBLIC_ROOM_API_URL` | Gốc URL hai back-end (không có `/api`). Mock: `http://localhost:4001`, `http://localhost:4002` |
+| `EXPO_PUBLIC_PAYTIME_URL`, `EXPO_PUBLIC_PAYTIME_IOS_STORE_URL`, `EXPO_PUBLIC_PAYTIME_ANDROID_STORE_URL` | Mở app THACO Paytime, hoặc trang cửa hàng nếu chưa cài |
+| `EXPO_PUBLIC_IT_SUPPORT_PHONE` | Số hotline IT ở màn đăng nhập (tùy chọn) |
+
+`EXPO_PUBLIC_*` được nhúng thẳng vào app nên không để bí mật trong đó. Khi tạo biến trên expo.dev, chọn visibility **Plain text** hoặc **Sensitive**: build local không đọc được biến **Secret**.
+
+Build EAS (local lẫn cloud) tự lấy biến của môi trường ứng với profile (`environment` trong `eas.json`), không dùng `.env` trên máy.
+
+| Lệnh | Việc |
+|---|---|
+| `npm run env:pull` · `env:pull:preview` · `env:pull:prod` | Ghi đè `.env` bằng biến development / preview / production trên expo.dev |
+| `npm run env:push` | Đẩy `.env` hiện tại lên expo.dev (hỏi chọn môi trường) |
+| `npm start` · `start:clear` · `start:prod` | Metro · xoá cache · chế độ production (tắt dev, minify) |
+| `npm run android` · `ios` | Build + cài development build |
+| `npm run android:release` · `ios:release` | Build release lên emulator / simulator, dùng `.env` hiện tại |
+| `npm run build:apk` | APK preview, build local → `build/thaco-hrm-preview.apk` |
+| `npm run build:apk:dev` | APK development client, build local → `build/thaco-hrm-dev.apk` |
+| `npm run build:aab` | AAB production, build local → `build/thaco-hrm.aab` |
+| `npm run build:apk:cloud` | APK preview build trên cloud EAS |
+| `npm run check` | typecheck + lint + test |
+| `npm run doctor` · `native:clean` | `expo-doctor` · prebuild lại `ios/` `android/` từ đầu |
+
+Build local cần Java 17, Android SDK (`ANDROID_HOME`) và `eas login`. Lần build đầu EAS hỏi tạo keystore Android: chọn Yes, keystore được lưu trên EAS và dùng lại cho các lần sau.
 
 Android emulator cần chuyển cổng để `localhost` trỏ về máy dev:
 
@@ -50,7 +81,7 @@ Dự án dùng Expo SDK 55, build được với Xcode 26.3. SDK 57 cần Xcode 
 LANG=en_US.UTF-8 npm run ios   # CocoaPods cần locale UTF-8
 ```
 
-Không có Xcode thì build trên cloud bằng EAS Build (`npx eas-cli@latest build -p ios`; repo chưa có `eas.json`, lần đầu chạy `eas build:configure`).
+Không có Xcode thì build trên cloud bằng EAS Build (`npx eas-cli@latest build -p ios --profile preview`, profile trong `eas.json`).
 
 ### Phông chữ và icon
 

@@ -30,7 +30,8 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env (single .env pulled from expo.dev: npm run env:pull)
+.env
 .env*.local
 
 # typescript
@@ -41,3 +42,25 @@ example
 # generated native folders
 /ios
 /android
+
+# build outputs (eas build --local writes them to the project root or ./build)
+/build/
+*.apk
+*.aab
+*.ipa
+*.app
+*.dSYM.zip
+build-*.tar.gz
+
+# tests
+coverage/
+.maestro/screenshots/
+
+# editors and tools
+.idea/
+.vscode/
+*.swp
+.claude/settings.local.json
+
+# logs
+*.log

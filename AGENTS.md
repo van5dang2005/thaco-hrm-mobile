@@ -36,7 +36,7 @@ Docs: https://docs.expo.dev/eas/index.md
 
 ## Rules
 
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
+- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.config.ts` and config plugins.
 - Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
 - Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
 
@@ -46,6 +46,7 @@ Docs: https://docs.expo.dev/eas/index.md
 - Enums are numeric on the wire; use the TS enums in `src/features/*/types.ts`. Times are UTC on the wire and shown in Vietnam time via `src/core/time/vn.ts`.
 - Every server error carries `errorCode`; map it with `errorMessage()` (`src/core/errors`). Add new codes to both locale files.
 - UI strings live in `src/core/i18n/locales/{vi,en}.ts` only.
+- App config is `app.config.ts` (there is no `app.json`). Env vars live on expo.dev (EAS environment variables); locally there is a single git-ignored `.env`, written by `npm run env:pull[:preview|:prod]`. EAS builds read the profile's `environment` from `eas.json`, never the local `.env`. `APP_ENV` picks the app name suffix.
 - Local mock of both back-ends: `npm run mock:api` (login `khoa.nm` or `nhung.vh`, password `123456`).
 - Pinned to Expo SDK 55 because SDK 57 needs Xcode ≥ 26.4. The universal `@expo/ui` layer (and the `expo-ui` skill's universal examples) needs SDK 56+, so on SDK 55 only `@expo/ui/swift-ui` and `@expo/ui/jetpack-compose` exist.
 - Icons: Phosphor, imported only through `src/shared/ui/icons.ts` (one file per icon). Never import from the `phosphor-react-native` or `@expo-google-fonts/*` package roots: Metro would bundle every icon / weight.
