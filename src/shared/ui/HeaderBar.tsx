@@ -1,0 +1,115 @@
+import { Image } from 'expo-image';
+import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Pressable, View } from 'react-native';
+
+import { useTheme } from '@/core/theme/ThemeProvider';
+import { images, WORDMARK_RATIO } from '@/shared/assets';
+import { cn } from '@/shared/lib/cn';
+import { goBack } from '@/shared/lib/navigation';
+
+import { Icon } from './Icon';
+import { type AppIcon, CaretDownIcon, CaretLeftIcon, XIcon } from './icons';
+import { onBlue, useHeaderColors } from './ScreenShell';
+import { Text } from './Text';
+
+type Props = {
+  title?: string;
+  /** THACO wordmark instead of a title (home). */
+  logo?: boolean;
+  /** `back` (default) goes back, `close` shows ✕, `none` hides the button (tab roots). */
+  leading?: 'back' | 'close' | 'none';
+  onBack?: () => void;
+  /** Replaces the leading button (home menu). */
+  left?: ReactNode;
+  right?: ReactNode;
+  testID?: string;
+};
+
+/** 44pt toolbar on the blue header: 44×44 back button, 17/600 white title on one line, right slot. */
+export function HeaderBar({ title, logo, leading = 'back', onBack, left, right, testID }: Props) {
+  const { t } = useTranslation();
+  const { fg } = useHeaderColors();
+
+  return (
+    <View testID={testID} className="h-11 flex-row items-center gap-1">
+      {left ??
+        (leading === 'none' ? (
+          <View className="w-2" />
+        ) : (
+          <Pressable
+            testID={`${testID ?? 'header'}-leading`}
+            accessibilityRole="button"
+            accessibilityLabel={leading === 'close' ? t('common.close') : t('common.back')}
+            onPress={onBack ?? (() => goBack())}
+            className="h-11 w-11 items-center justify-center active:opacity-60"
+          >
+            <Icon icon={leading === 'close' ? XIcon : CaretLeftIcon} size={22} weight="bold" rawColor={fg} />
+          </Pressable>
+        ))}
+      {logo ? (
+        <View className="flex-1 pl-1" accessibilityRole="header" accessibilityLabel="THACO">
+          <Image source={images.wordmark} style={{ height: 16, width: 16 * WORDMARK_RATIO }} contentFit="contain" accessibilityIgnoresInvertColors />
+        </View>
+      ) : (
+        <Text weight="semibold" numberOfLines={1} accessibilityRole="header" className="flex-1" style={{ fontSize: 17, lineHeight: 22, color: fg }}>
+          {title ?? ''}
+        </Text>
+      )}
+      {right ? <View className="flex-row items-center gap-2 pr-1">{right}</View> : null}
+    </View>
+  );
+}
+
+type IconButtonProps = {
+  icon: AppIcon;
+  label: string;
+  onPress: () => void;
+  /** `tint` = 40pt circle in white 14% (default); `plain` = bare 44pt icon; `solid` = white circle, primary icon. */
+  variant?: 'tint' | 'plain' | 'solid';
+  /** Overlays such as a count badge. */
+  children?: ReactNode;
+  testID?: string;
+};
+
+/** Round icon button on the blue header (filters, more, notifications). */
+export function HeaderIconButton({ icon, label, onPress, variant = 'tint', children, testID }: IconButtonProps) {
+  const { colors } = useTheme();
+  const { fg } = useHeaderColors();
+  const plain = variant === 'plain';
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      hitSlop={plain ? 0 : 2}
+      className={cn('items-center justify-center rounded-full active:opacity-70', plain ? 'h-11 w-11' : 'h-10 w-10')}
+      style={plain ? undefined : { backgroundColor: variant === 'solid' ? colors['header-name'] : onBlue(0.14) }}
+    >
+      <Icon icon={icon} size={plain ? 22 : variant === 'solid' ? 20 : 18} weight={variant === 'solid' ? 'bold' : 'regular'} rawColor={variant === 'solid' ? colors.header : fg} />
+      {children}
+    </Pressable>
+  );
+}
+
+/** 34pt pill button on the blue header ("Ủy quyền", "Chọn nhiều", "Lịch của tôi"); `caret` adds a ▾ (pickers). */
+export function HeaderPillButton({ icon, label, onPress, caret, testID }: { icon?: AppIcon; label: string; onPress: () => void; caret?: boolean; testID?: string }) {
+  const { fg } = useHeaderColors();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      onPress={onPress}
+      hitSlop={{ top: 5, bottom: 5 }}
+      className="h-[34px] flex-row items-center justify-center gap-1.5 rounded-full px-3 active:opacity-70"
+      style={{ backgroundColor: onBlue(0.14) }}
+    >
+      {icon ? <Icon icon={icon} size={15} rawColor={fg} /> : null}
+      <Text weight="semibold" numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 16, color: fg }}>
+        {label}
+      </Text>
+      {caret ? <Icon icon={CaretDownIcon} size={13} weight="bold" rawColor={fg} /> : null}
+    </Pressable>
+  );
+}

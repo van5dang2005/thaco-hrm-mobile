@@ -1,0 +1,26 @@
+# Reception hands the first waiting parcel to its own receiver (eligibility "Chính chủ").
+appId: vn.com.thaco.hrm
+name: Bàn giao bưu phẩm
+tags: [parcels]
+---
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      USERNAME: nhung.vh
+      PASSWORD: "123456"
+- openLink: thacohrm://parcels/reception
+- tapOn:
+    id: reception-status-1
+- tapOn:
+    id: "reception-check-.*"
+    index: 0
+- tapOn:
+    id: reception-bulk-handover
+- tapOn:
+    id: handover-candidate-0
+- assertVisible:
+    id: handover-eligibility
+- assertVisible: ".*Chính chủ.*"
+- tapOn:
+    id: handover-submit
+- assertVisible: "Đã bàn giao 1 bưu phẩm"

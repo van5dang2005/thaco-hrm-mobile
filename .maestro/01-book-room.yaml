@@ -1,0 +1,36 @@
+# lan.nt books "Tam Hiệp" 15:00–16:00 two days ahead; the room has one approval level (khoa.nm).
+# Wizard: B1 room → B2 time slots → B3 details → B4 confirm.
+appId: vn.com.thaco.hrm
+name: Đặt phòng họp
+tags: [rooms]
+---
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      USERNAME: lan.nt
+      PASSWORD: "123456"
+- openLink: thacohrm://rooms/book
+- tapOn:
+    id: booking-area
+- tapOn: "THACO Chu Lai"
+- tapOn:
+    id: "booking-day-.*"
+    index: 2
+# Room cards read "<room>, <seats> · <floor>"; the time button "Chọn giờ, <room>".
+- scrollUntilVisible:
+    element: "Tam Hiệp, .*"
+- tapOn: "Chọn giờ, Tam Hiệp"
+- tapOn:
+    id: "slot-15:00"
+- tapOn:
+    id: "slot-15:30"
+- tapOn:
+    id: booking-time-continue
+- tapOn:
+    id: booking-content
+- inputText: "E2E hop kiem thu"
+- tapOn:
+    id: booking-content-continue
+- tapOn:
+    id: booking-submit
+- assertVisible: "Đã gửi phiếu đăng ký"

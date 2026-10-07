@@ -1,0 +1,25 @@
+# khoa.nm approves the booking created by 01-book-room.yaml from the approvals inbox.
+appId: vn.com.thaco.hrm
+name: Duyệt phiếu
+tags: [rooms]
+---
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      USERNAME: khoa.nm
+      PASSWORD: "123456"
+- tapOn:
+    id: tab-approvals
+# Inbox cards read "hh:mm–hh:mm, <content>"; open the detail, then approve from its footer sheet.
+- scrollUntilVisible:
+    element: ".*E2E hop kiem thu"
+- tapOn: ".*E2E hop kiem thu"
+- tapOn:
+    id: meeting-approve
+- extendedWaitUntil:
+    visible:
+      id: approve-sheet-approve
+    timeout: 10000
+- tapOn:
+    id: approve-sheet-approve
+- assertVisible: "Đã duyệt phiếu"

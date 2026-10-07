@@ -1,0 +1,33 @@
+# Reception (nhung.vh) receives one parcel for Trần Thu Hà.
+appId: vn.com.thaco.hrm
+name: Tiếp nhận bưu phẩm
+tags: [parcels]
+---
+- runFlow:
+    file: subflows/login.yaml
+    env:
+      USERNAME: nhung.vh
+      PASSWORD: "123456"
+- openLink: thacohrm://parcels/reception
+- tapOn:
+    id: reception-create
+- tapOn:
+    id: parcel-form-tracking
+- inputRandomText:
+    length: 10
+- tapOn: "Người nhận"
+- tapOn:
+    id: parcel-form-pick-receiver
+- inputText: "ha.tt"
+- tapOn:
+    id: parcel-form-receiver-picker-result-0
+- tapOn:
+    id: parcel-form-sender
+- inputText: "Viettel Post"
+- tapOn: "Người nhận"
+- scrollUntilVisible:
+    element:
+      id: parcel-form-submit
+- tapOn:
+    id: parcel-form-submit
+- assertVisible: "Đã tiếp nhận bưu phẩm"

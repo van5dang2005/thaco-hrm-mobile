@@ -1,0 +1,10 @@
+# Run with the mock API (npm run mock:api) and Metro running:  maestro test .maestro
+flows:
+  - "0*.yaml"
+executionOrder:
+  continueOnFailure: false
+  flowsOrder:
+    - Đặt phòng họp
+    - Duyệt phiếu
+    - Tiếp nhận bưu phẩm
+    - Bàn giao bưu phẩm
