@@ -52,7 +52,7 @@ export function ServiceTile({ label, subLabel, icon, tone = 'primary', badgeCoun
           placeholder ? 'border-[1.5px] border-dashed border-line-strong' : toneBox[tone],
         )}
       >
-        <Icon icon={placeholder ? PlusIcon : icon} size={placeholder ? 22 : 26} weight={placeholder ? 'regular' : 'duotone'} color={placeholder ? 'subtle' : toneIcon[tone]} />
+        <Icon icon={placeholder ? PlusIcon : icon} size={placeholder ? 22 : 26} weight="regular" color={placeholder ? 'subtle' : toneIcon[tone]} />
         {external ? (
           <View className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full border-2 border-surface bg-inverse">
             <Icon icon={ArrowUpRightIcon} size={10} weight="bold" color="on-inverse" />

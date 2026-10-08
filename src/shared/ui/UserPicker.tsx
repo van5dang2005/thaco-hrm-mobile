@@ -9,7 +9,7 @@ import { cn } from '@/shared/lib/cn';
 
 import { Button } from './Button';
 import { Icon } from './Icon';
-import { CheckIcon, MagnifyingGlassIcon } from './icons';
+import { CheckIcon, SearchIcon } from './icons';
 import { PersonRow, type Person } from './PersonRow';
 import { BottomSheet } from './BottomSheet';
 import { ErrorState } from './StateViews';
@@ -106,7 +106,7 @@ export function UserPicker<T extends Person>({
       <TextField
         testID={testID ? `${testID}-search` : undefined}
         appearance="ios"
-        leftIcon={MagnifyingGlassIcon}
+        leftIcon={SearchIcon}
         value={keyword}
         onChangeText={setKeyword}
         placeholder={t('booking.searchUsers')}

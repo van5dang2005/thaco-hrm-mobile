@@ -2,28 +2,29 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, View } from 'react-native';
-import Animated, { SlideInRight } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 
 import { isApiError } from '@/core/api/ApiError';
 import { errorMessage } from '@/core/errors/errorMessage';
 import { qk } from '@/core/query/keys';
 import { sameId } from '@/core/session/userTypes';
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { cn } from '@/shared/lib/cn';
+import { formatKey } from '@/core/time/vn';
+import { AvatarStack } from '@/shared/ui/Avatar';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Icon } from '@/shared/ui/Icon';
-import { type AppIcon, BellIcon, CheckCircleIcon, PaperPlaneTiltIcon, SealCheckIcon } from '@/shared/ui/icons';
-import { useLightStatusBar } from '@/shared/ui/ScreenShell';
+import { Card } from '@/shared/ui/Card';
+import { BellIcon, InfoIcon, SendIcon } from '@/shared/ui/icons';
+import { ModuleScreen } from '@/shared/ui/ModuleScreen';
+import { Tag } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
 
 import { bookingsApi } from '../api';
 import { draftToForm, useBookingDraft } from '../draftStore';
 import { useRooms, useRoomSteps } from '../hooks';
-import { ApprovalActionType, BookingStatus, type ApprovalStepDto } from '../types';
+import { ApprovalActionType, BookingStatus, type ApprovalHandlerDto, type ApprovalStepDto } from '../types';
 import { WizardHeader } from '../ui/WizardHeader';
 import { BookingTicket } from '../ui/BookingTicket';
 import { useDraftLabels } from '../wizardData';
@@ -43,14 +44,9 @@ const stepForError: Record<string, WizardStep> = {
   EXCEED_10MB_LIMIT: 'details',
 };
 
-type FlowNode = { key: string; icon: AppIcon; label: string; sub: string; tone: 'primary' | 'default' | 'success' };
-
 /** B4 (4d): ticket summary, what happens next, submit. */
 export function ConfirmStep() {
   const { t } = useTranslation();
-  const { colors, scheme } = useTheme();
-  const insets = useSafeAreaInsets();
-  useLightStatusBar();
   const queryClient = useQueryClient();
   const draft = useBookingDraft((s) => s.draft);
   const reset = useBookingDraft((s) => s.reset);
@@ -108,7 +104,7 @@ export function ConfirmStep() {
 
   const approveSteps = (steps ?? []).filter((s) => s.isActive !== false && s.actionType === ApprovalActionType.Approve);
   const notifySteps = (steps ?? []).filter((s) => s.isActive !== false && s.actionType === ApprovalActionType.Notify);
-  const nodes = useFlowNodes(approveSteps, notifySteps);
+  const levelCount = new Set(approveSteps.map((s) => s.order ?? 0)).size;
   const note =
     editing
       ? t('booking.afterSubmitEdit')
@@ -117,43 +113,36 @@ export function ConfirmStep() {
         : !approveSteps.length
           ? t('booking.afterSubmitNoFlow')
           : labels.sessions.length > 1
-            ? t('booking.afterSubmitNote')
+            ? t('booking.conflictNote')
             : t('booking.afterSubmitNoteSingle');
+  const lastSession = labels.sessions[labels.sessions.length - 1];
+  const datesShort = labels.recurring && lastSession && lastSession !== draft.dateKey ? `${labels.dayShort} → ${formatKey(lastSession, false)}` : labels.dayShort;
 
   if (!draft.roomId) return <Redirect href="/rooms/book" />;
 
+  const footer = (
+    <>
+      <Button className="flex-1" variant="soft" label={t('booking.edit')} onPress={() => goToStep('details')} />
+      <Button
+        testID="booking-submit"
+        className="flex-[1.9]"
+        label={editing ? t('booking.saveChanges') : labels.sessions.length > 1 ? t('booking.submitSessions', { count: labels.sessions.length }) : t('booking.submit')}
+        loading={submit.isPending}
+        trailing={submit.isPending ? undefined : <Icon icon={SendIcon} size={16} weight="bold" color="on-primary" />}
+        onPress={() => {
+          setFailure(null);
+          submit.mutate();
+        }}
+      />
+    </>
+  );
+
   return (
-    <View className="flex-1" style={{ backgroundColor: colors.header }}>
-      <View style={{ paddingTop: insets.top }} className="px-3">
-        <WizardHeader testID="booking-confirm-header" title={t('booking.confirmTitle')} step={4} />
-      </View>
-      <ScrollView contentContainerStyle={{ paddingTop: 4, paddingBottom: 16 }}>
-        <BookingTicket
-          badge={labels.badge}
-          time={labels.timeSpaced}
-          dates={labels.dates}
-          title={draft.content.trim()}
-          confidential={draft.confidential}
-          rows={rows}
-        />
-      </ScrollView>
-
-      <Animated.View
-        entering={SlideInRight.duration(220)}
-        className={cn('gap-4 rounded-t-sheet bg-surface px-4 pt-5', scheme === 'dark' && 'border-x border-t border-line')}
-        style={{ paddingBottom: Math.max(insets.bottom, 12) + 4 }}
-      >
-        <View className="gap-1">
-          <Text weight="semibold" accessibilityRole="header" className="text-card">
-            {t('booking.afterSubmit')}
-          </Text>
-          <Text className="text-sub-sm text-muted">{note}</Text>
-        </View>
-
-        {steps !== undefined && !editing ? <FlowDiagram nodes={nodes} /> : null}
-        {overCapacity ? <Banner tone="warning">{t('booking.overCapacity', { people: draft.people, seats: room?.numberOfSeats ?? 0 })}</Banner> : null}
-
-        {failure ? (
+    <ModuleScreen
+      header={<WizardHeader testID="booking-confirm-header" step={4} />}
+      footer={footer}
+      footerNote={
+        failure ? (
           <View className="gap-2">
             <Banner tone="danger" testID="booking-submit-error">
               {failure.message}
@@ -161,88 +150,119 @@ export function ConfirmStep() {
             {failure.step ? (
               <Button
                 variant="ghost"
-                size="lg"
+                size="md"
                 label={failure.step === 'index' ? t('booking.backToRoom') : failure.step === 'time' ? t('booking.backToTime') : t('booking.detailsTitle')}
                 onPress={() => goToStep(failure.step!)}
               />
             ) : null}
           </View>
-        ) : null}
+        ) : null
+      }
+    >
+      <BookingTicket badge={labels.badge} dates={datesShort} time={labels.timeSpaced} title={draft.content.trim()} confidential={draft.confidential} rows={rows} />
 
-        <Button
-          testID="booking-submit"
-          icon={PaperPlaneTiltIcon}
-          label={editing ? t('booking.saveChanges') : labels.sessions.length > 1 ? t('booking.submitSessions', { count: labels.sessions.length }) : t('booking.submit')}
-          loading={submit.isPending}
-          onPress={() => {
-            setFailure(null);
-            submit.mutate();
-          }}
-        />
-      </Animated.View>
-    </View>
-  );
-}
-
-function useFlowNodes(approve: ApprovalStepDto[], notify: ApprovalStepDto[]): FlowNode[] {
-  const { t } = useTranslation();
-  const you: FlowNode = { key: 'you', icon: PaperPlaneTiltIcon, label: t('booking.flowYou'), sub: t('booking.flowToday'), tone: 'primary' };
-  if (!approve.length) {
-    return [you, { key: 'active', icon: CheckCircleIcon, label: t('booking.flowActive'), sub: t('booking.flowActiveSub'), tone: 'success' }];
-  }
-  // Steps sharing an order are one level (any approver of the level can approve).
-  const levels = [...new Set(approve.map((s) => s.order ?? 0))].sort((a, b) => a - b);
-  return [
-    you,
-    ...levels.map((order) => ({
-      key: `level-${order}`,
-      icon: SealCheckIcon,
-      label: t('booking.flowLevel', { order }),
-      sub: approve
-        .filter((s) => (s.order ?? 0) === order)
-        .map((s) => s.name)
-        .filter(Boolean)
-        .join(', '),
-      tone: 'default' as const,
-    })),
-    ...(notify.length
-      ? [{ key: 'notify', icon: BellIcon, label: notify.map((s) => s.name).filter(Boolean)[0] ?? t('booking.flowNotify'), sub: t('booking.flowNotifySub'), tone: 'default' as const }]
-      : []),
-  ];
-}
-
-/** Horizontal flow: 36pt nodes on a connecting rule. Scrolls when a room has many levels. */
-function FlowDiagram({ nodes }: { nodes: FlowNode[] }) {
-  const { colors } = useTheme();
-  const fixed = nodes.length > 5;
-  const body = (
-    <View className="flex-row" style={fixed ? { width: nodes.length * 80 } : undefined}>
-      <View className="absolute h-0.5" style={{ top: 17, left: `${50 / nodes.length}%`, right: `${50 / nodes.length}%`, backgroundColor: colors.line }} />
-      {nodes.map((node) => (
-        <View key={node.key} className="flex-1 items-center gap-1.5" accessible accessibilityLabel={`${node.label}, ${node.sub}`}>
-          <View
-            className="h-9 w-9 items-center justify-center rounded-full"
-            style={{ backgroundColor: node.tone === 'primary' ? colors.primary : node.tone === 'success' ? colors.success : colors['icon-ring'] }}
-          >
-            <Icon icon={node.icon} size={17} rawColor={node.tone === 'default' ? colors['primary-tint-text'] : node.tone === 'primary' ? colors['on-primary'] : '#FFFFFF'} />
-          </View>
-          <Text weight="semibold" numberOfLines={1} className="px-0.5 text-center text-meta">
-            {node.label}
+      <Card className="gap-3 p-4">
+        <View className="flex-row items-center justify-between">
+          <Text weight="bold" accessibilityRole="header" style={{ fontSize: 15, lineHeight: 20 }}>
+            {t('booking.approvalFlow')}
           </Text>
-          {node.sub ? (
-            <Text numberOfLines={2} className="px-0.5 text-center text-meta-sm text-subtle">
-              {node.sub}
+          {levelCount ? (
+            <Text className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
+              {t('booking.levelsCount', { count: levelCount })}
             </Text>
           ) : null}
         </View>
+        {steps !== undefined && !editing && approveSteps.length ? <ApprovalFlow approve={approveSteps} notify={notifySteps} /> : null}
+        <View className="flex-row items-start gap-1.5">
+          <Icon icon={InfoIcon} size={13} color="muted" />
+          <Text className="flex-1 text-muted" style={{ fontSize: 12, lineHeight: 17 }}>
+            {note}
+          </Text>
+        </View>
+      </Card>
+
+      {overCapacity ? <Banner tone="warning">{t('booking.overCapacity', { people: draft.people, seats: room?.numberOfSeats ?? 0 })}</Banner> : null}
+    </ModuleScreen>
+  );
+}
+
+type Level = { key: string; order: number; name: string; handlers: ApprovalHandlerDto[]; notify: boolean };
+
+/** Vertical flow (4d): one numbered box per level (steps sharing an order are one level, any approver suffices), then the notify step. */
+function ApprovalFlow({ approve, notify }: { approve: ApprovalStepDto[]; notify: ApprovalStepDto[] }) {
+  const orders = [...new Set(approve.map((s) => s.order ?? 0))].sort((a, b) => a - b);
+  const levels: Level[] = [
+    ...orders.map((order) => {
+      const steps = approve.filter((s) => (s.order ?? 0) === order);
+      return {
+        key: `level-${order}`,
+        order,
+        name: steps.map((s) => s.name).filter(Boolean).join(', '),
+        handlers: steps.flatMap((s) => s.approvalHandlers ?? []),
+        notify: false,
+      };
+    }),
+    ...notify.map((s, i) => ({ key: `notify-${s.id}`, order: orders.length + i + 1, name: s.name ?? '', handlers: s.approvalHandlers ?? [], notify: true })),
+  ];
+  return (
+    <View>
+      {levels.map((level, i) => (
+        <FlowRow key={level.key} level={level} index={i} last={i === levels.length - 1} />
       ))}
     </View>
   );
-  return fixed ? (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      {body}
-    </ScrollView>
-  ) : (
-    body
+}
+
+function FlowRow({ level, index, last }: { level: Level; index: number; last: boolean }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const people = level.handlers.map((h) => h.user).filter((u): u is NonNullable<typeof u> => !!u);
+  const names = people.map((u) => u.fullname).filter(Boolean).join(', ');
+  const sub = people[0]?.jobTitles?.[0]?.name ?? people[0]?.departments?.[0]?.name ?? '';
+  const heading = level.notify ? `${t('booking.flowNotify')}` : `${t('booking.flowLevel', { order: index + 1 })}${level.name ? ` · ${level.name}` : ''}`;
+  return (
+    <View className="flex-row gap-3">
+      <View className="items-center" style={{ width: 28 }}>
+        <View className="h-7 w-7 items-center justify-center rounded-full" style={{ backgroundColor: level.notify ? colors['off-tint'] : colors['primary-tint'] }}>
+          {level.notify ? (
+            <Icon icon={BellIcon} size={14} color="muted" />
+          ) : (
+            <Text mono weight="bold" style={{ fontSize: 12.5, lineHeight: 16, color: colors.primary }}>
+              {String(index + 1)}
+            </Text>
+          )}
+        </View>
+        {!last ? <View className="w-0.5 flex-1 bg-line-2" style={{ marginVertical: 4 }} /> : null}
+      </View>
+      <View className={`min-w-0 flex-1 gap-2 rounded-[14px] bg-panel p-3 ${last ? '' : 'mb-2.5'}`}>
+        <View className="flex-row items-center justify-between gap-2">
+          <Text weight="bold" numberOfLines={1} className="flex-shrink text-muted" style={{ fontSize: 11, lineHeight: 14, letterSpacing: 0.6, textTransform: 'uppercase' }}>
+            {heading}
+          </Text>
+          {level.notify ? (
+            <Tag label={t('booking.notifyOnly')} />
+          ) : people.length > 1 ? (
+            <Tag label={t('booking.oneOf', { count: people.length })} />
+          ) : (
+            <Tag kind="wait" label={t('booking.tagApprove')} />
+          )}
+        </View>
+        {people.length ? (
+          <View className="flex-row items-center gap-2.5">
+            <AvatarStack size={26} max={3} people={people.map((u) => ({ name: u.fullname, uri: u.avatarUrl }))} />
+            <View className="min-w-0 flex-1">
+              <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 13.5, lineHeight: 18 }}>
+                {names}
+              </Text>
+              {sub ? (
+                <Text numberOfLines={1} className="text-muted" style={{ fontSize: 11.5, lineHeight: 15 }}>
+                  {sub}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 }

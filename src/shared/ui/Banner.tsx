@@ -5,15 +5,15 @@ import type { ColorToken } from '@/core/theme/palette';
 import { cn } from '@/shared/lib/cn';
 
 import { Icon } from './Icon';
-import { type AppIcon, CheckCircleIcon, InfoIcon, WarningCircleIcon } from './icons';
+import { type AppIcon, CircleCheckIcon, InfoIcon, CircleAlertIcon } from './icons';
 import { Text } from './Text';
 
 type Tone = 'danger' | 'success' | 'warning' | 'off' | 'info';
 
 const styles: Record<Tone, { box: string; text: string; icon: ColorToken; glyph: AppIcon }> = {
-  danger: { box: 'bg-danger-tint', text: 'text-danger-deep', icon: 'danger', glyph: WarningCircleIcon },
-  success: { box: 'bg-success-tint', text: 'text-success-deep', icon: 'success', glyph: CheckCircleIcon },
-  warning: { box: 'bg-warning-tint', text: 'text-warning-text', icon: 'warning', glyph: WarningCircleIcon },
+  danger: { box: 'bg-danger-tint', text: 'text-danger-deep', icon: 'danger', glyph: CircleAlertIcon },
+  success: { box: 'bg-success-tint', text: 'text-success-deep', icon: 'success', glyph: CircleCheckIcon },
+  warning: { box: 'bg-warning-tint', text: 'text-warning-text', icon: 'warning', glyph: CircleAlertIcon },
   off: { box: 'bg-off-tint', text: 'text-ink-2', icon: 'muted', glyph: InfoIcon },
   info: { box: 'bg-primary-tint', text: 'text-primary-tint-deep', icon: 'primary-tint-text', glyph: InfoIcon },
 };

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { type AppIcon, MoonIcon, SunHorizonIcon, SunIcon } from '@/shared/ui/icons';
+import { type AppIcon, MoonIcon, SunriseIcon, SunIcon } from '@/shared/ui/icons';
 
 export type GreetingPeriod = 'morning' | 'afternoon' | 'evening';
 
@@ -20,7 +20,7 @@ export function msToNextPeriod(date: Date): number {
   return next.getTime() - date.getTime();
 }
 
-const icons: Record<GreetingPeriod, AppIcon> = { morning: SunIcon, afternoon: SunHorizonIcon, evening: MoonIcon };
+const icons: Record<GreetingPeriod, AppIcon> = { morning: SunIcon, afternoon: SunriseIcon, evening: MoonIcon };
 
 const tints = {
   light: {

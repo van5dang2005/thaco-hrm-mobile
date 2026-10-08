@@ -1,24 +1,25 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { Redirect, router } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, ScrollView, Switch, TextInput, View } from 'react-native';
+import { Alert, Pressable, Switch, TextInput, View } from 'react-native';
 import { z } from 'zod';
 
 import { useRoomMe } from '@/core/session/useMe';
 import { roomPerson, sameId, type PersonOf, type RoomUser } from '@/core/session/userTypes';
-import { MAX_FONT_SCALE } from '@/core/theme/fonts';
-import { useFontStyle } from '@/core/theme/fontStore';
+import { MAX_FONT_SCALE, useFontStyle } from '@/core/theme/fonts';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { cn } from '@/shared/lib/cn';
-import { Avatar } from '@/shared/ui/Avatar';
+import { AvatarStack } from '@/shared/ui/Avatar';
 import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Icon } from '@/shared/ui/Icon';
-import { CheckIcon, DoorOpenIcon, LinkSimpleIcon, LockIcon, PlusIcon, XIcon } from '@/shared/ui/icons';
+import { CheckIcon, ChevronRightIcon, DoorOpenIcon, LinkIcon, LockIcon, PlusIcon, XIcon } from '@/shared/ui/icons';
 import { PersonRow } from '@/shared/ui/PersonRow';
 import { RoundIcon } from '@/shared/ui/RoundIcon';
-import { onBlue, ScreenShell } from '@/shared/ui/ScreenShell';
+import { Card, FloatingCard } from '@/shared/ui/Card';
+import { ModuleScreen } from '@/shared/ui/ModuleScreen';
+import { Tag } from '@/shared/ui/StatusBadge';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Text } from '@/shared/ui/Text';
 import { TextField } from '@/shared/ui/TextField';
@@ -41,7 +42,6 @@ const detailsSchema = z.object({
 
 const linkSchema = z.string().trim().regex(/^https?:\/\/\S+$/i);
 
-const AVATARS = 4;
 
 /** B3 (4c): content, participants, services and documents. */
 export function DetailsStep() {
@@ -60,6 +60,7 @@ export function DetailsStep() {
   const [linkInput, setLinkInput] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [contentFocused, setContentFocused] = useState(false);
 
   if (!draft.roomId) return <Redirect href="/rooms/book" />;
 
@@ -68,7 +69,6 @@ export function DetailsStep() {
   const documentCount = draft.keptAttachments.length + draft.files.length + draft.links.length;
   const phone = draft.phone || me.data?.phoneNumber || '';
   const services = (room?.services ?? []).filter((s) => s.isActive !== false);
-  const fg = colors['header-name'];
 
   const onPickPeople = (picked: PersonOf<RoomUser>[]) => {
     const existing = new Map(participants.map((p) => [p.user.id.toLowerCase(), p]));
@@ -124,201 +124,255 @@ export function DetailsStep() {
     router.push('/rooms/book/confirm');
   };
 
-  const header = (
-    <>
-      <WizardHeader testID="booking-details-header" title={t('booking.detailsTitle')} step={3} />
-      <View className="mx-3 mt-2.5 flex-row items-center gap-3 rounded-[16px] px-3.5 py-3" style={{ backgroundColor: onBlue(0.12) }}>
-        <RoundIcon icon={DoorOpenIcon} size={40} tone="onBlue" />
-        <View className="min-w-0 flex-1 gap-0.5">
-          <Text weight="semibold" numberOfLines={1} className="text-body" style={{ color: fg }}>
-            {room?.name ?? ''}
-          </Text>
-          <Text numberOfLines={2} className="text-meta" style={{ color: colors['header-job'] }}>
-            <Text mono className="text-meta" style={{ color: colors['header-job'] }}>
-              {labels.time}
-            </Text>
-            {` · ${labels.dayShort}${labels.repeat ? ` · ${labels.repeat}` : ''}`}
-          </Text>
-        </View>
-        <Pressable testID="booking-details-edit-time" accessibilityRole="button" accessibilityLabel={t('booking.backToTime')} onPress={() => goToStep('time')} hitSlop={12} className="min-h-[44px] justify-center">
-          <Text weight="semibold" className="text-sub" style={{ color: fg }}>
-            {t('booking.edit')}
-          </Text>
-        </Pressable>
-      </View>
-    </>
+  const header = <WizardHeader testID="booking-details-header" step={3} bottom={44} />;
+
+  const summary = (
+    <FloatingCard className="flex-row items-center gap-3 px-3.5 py-3">
+      <RoundIcon icon={DoorOpenIcon} size={32} square />
+      <Text numberOfLines={1} className="min-w-0 flex-1 text-ink" style={{ fontSize: 12.5, lineHeight: 17 }}>
+        <Text weight="bold" style={{ fontSize: 13 }}>
+          {room?.name ?? ''}
+        </Text>
+        {' · '}
+        <Text mono weight="medium" style={{ fontSize: 12 }}>
+          {labels.time}
+        </Text>
+        {` · ${labels.dayShort}${labels.recurring ? ` · ×${labels.sessions.length}` : ''}`}
+      </Text>
+      <Pressable testID="booking-details-edit-time" accessibilityRole="button" accessibilityLabel={t('booking.backToTime')} onPress={() => goToStep('time')} hitSlop={12} className="min-h-[36px] justify-center active:opacity-60">
+        <Text weight="bold" className="text-primary" style={{ fontSize: 13.5, lineHeight: 18 }}>
+          {t('booking.edit')}
+        </Text>
+      </Pressable>
+    </FloatingCard>
   );
 
   const footer = (
-    <View className="flex-1 gap-3">
-      {error ? (
-        <Banner tone="danger" testID="booking-details-error">
-          {error}
-        </Banner>
-      ) : null}
-      <Button testID="booking-content-continue" label={t('booking.review')} onPress={review} />
-    </View>
+    <>
+      <Button className="flex-1" variant="soft" label={t('common.back')} onPress={() => goToStep('time')} />
+      <Button
+        testID="booking-content-continue"
+        className="flex-[1.7]"
+        label={t('common.next')}
+        onPress={review}
+        trailing={<Icon icon={ChevronRightIcon} size={16} weight="bold" color="on-primary" />}
+      />
+    </>
   );
 
-  return (
-    <ScreenShell header={header} footer={footer} slide sheetBg="surface" scroll={false}>
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="gap-5 px-4 pb-6 pt-[22px]">
-        <Section title={t('booking.contentLabel')}>
-          <TextInput
-            testID="booking-content"
-            value={draft.content}
-            onChangeText={(content) => {
-              setError(null);
-              patch({ content });
-            }}
-            placeholder={t('booking.contentPlaceholder')}
-            placeholderTextColor={colors.subtle}
-            multiline
-            maxLength={500}
-            maxFontSizeMultiplier={MAX_FONT_SCALE}
-            textAlignVertical="top"
-            accessibilityLabel={t('booking.contentLabel')}
-            className="min-h-[72px] rounded-[16px] bg-field px-3.5 py-3"
-            style={{ fontSize: 14, lineHeight: 21, color: colors.ink, ...inputFont }}
-          />
-          <View className="min-h-[44px] flex-row items-center gap-2">
-            <Icon icon={LockIcon} size={16} color="ink-2" />
-            <Text className="flex-1 text-sub text-ink-2">{t('booking.confidential')}</Text>
-            <Switch
-              testID="booking-confidential"
-              value={draft.confidential}
-              onValueChange={(confidential) => patch({ confidential })}
-              trackColor={{ true: colors.primary, false: colors.track }}
-              thumbColor="#FFFFFF"
-              ios_backgroundColor={colors.track}
-              accessibilityLabel={t('booking.confidential')}
-            />
-          </View>
-        </Section>
+  const shownPeople = participants.slice(0, 2);
+  const others = participants.slice(2);
 
-        <Section
+  return (
+    <ModuleScreen
+      header={header}
+      floating={summary}
+      footer={footer}
+      footerNote={
+        error ? (
+          <Banner tone="danger" testID="booking-details-error">
+            {error}
+          </Banner>
+        ) : null
+      }
+    >
+      <Card className="gap-2.5 p-4">
+        <Text weight="semibold" className="text-ink-2" style={{ fontSize: 13, lineHeight: 17 }}>
+          {t('booking.contentLabel')}
+          <Text weight="semibold" className="text-danger">
+            {' *'}
+          </Text>
+        </Text>
+        <TextInput
+          testID="booking-content"
+          value={draft.content}
+          onChangeText={(content) => {
+            setError(null);
+            patch({ content });
+          }}
+          onFocus={() => setContentFocused(true)}
+          onBlur={() => setContentFocused(false)}
+          placeholder={t('booking.contentPlaceholder')}
+          placeholderTextColor={colors.subtle}
+          multiline
+          maxLength={500}
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
+          textAlignVertical="top"
+          accessibilityLabel={t('booking.contentLabel')}
+          className="min-h-[76px] rounded-[14px] px-3.5 py-3"
+          style={{
+            fontSize: 14.5,
+            lineHeight: 21,
+            color: colors.ink,
+            ...inputFont,
+            backgroundColor: contentFocused ? colors.elevated : colors.panel,
+            borderWidth: 1.5,
+            borderColor: contentFocused ? colors.primary : 'transparent',
+          }}
+        />
+        <View className="min-h-[40px] flex-row items-center gap-2">
+          <Icon icon={LockIcon} size={15} color="ink-2" />
+          <Text className="text-ink-2" style={{ fontSize: 13.5, lineHeight: 18 }}>
+            {t('booking.confidential')}
+          </Text>
+          <Text numberOfLines={1} className="flex-1 text-right text-subtle" style={{ fontSize: 11.5, lineHeight: 15 }}>
+            {t('booking.confidentialHint')}
+          </Text>
+          <Switch
+            testID="booking-confidential"
+            value={draft.confidential}
+            onValueChange={(confidential) => patch({ confidential })}
+            trackColor={{ true: colors.success, false: colors.track }}
+            thumbColor="#FFFFFF"
+            ios_backgroundColor={colors.track}
+            accessibilityLabel={t('booking.confidential')}
+          />
+        </View>
+      </Card>
+
+      <Card className="gap-1 p-4">
+        <CardTitle
           title={t('booking.participantsTitle', { count: participants.length })}
-          right={
-            <Text weight="semibold" numberOfLines={1} className={cn('flex-shrink text-sub', host ? 'text-primary' : 'text-subtle')}>
-              {host ? t('booking.hostIs', { name: host.user.fullname ?? '' }) : t('booking.noHost')}
-            </Text>
-          }
-        >
-          <View className="flex-row items-center">
-            <Pressable
-              testID="booking-add-participant"
-              accessibilityRole="button"
-              accessibilityLabel={t('booking.addPeople')}
-              onPress={() => setPicker(true)}
-              className="mr-2.5 h-[38px] w-[38px] items-center justify-center rounded-full border-[1.5px] border-dashed border-primary active:opacity-70"
-              hitSlop={4}
-            >
-              <Icon icon={PlusIcon} size={18} color="primary" />
-            </Pressable>
-            {participants.length ? (
+          action={t('common.add')}
+          onAction={() => setPicker(true)}
+          actionTestID="booking-add-participant"
+        />
+        {participants.length ? (
+          <>
+            {shownPeople.map((p, i) => (
+              <PersonRow
+                key={p.user.id}
+                person={roomPerson(p.user)}
+                className={cn('py-2', i > 0 && 'border-t border-line-2')}
+                onPress={() => setPeople(true)}
+                trailing={
+                  p.isHost ? <Tag kind="wait" label={t('booking.host')} /> : p.isPrepareContent ? <Tag kind="warn" label={t('booking.prepare')} /> : undefined
+                }
+              />
+            ))}
+            {others.length ? (
               <Pressable
                 testID="booking-participants"
                 accessibilityRole="button"
                 accessibilityLabel={`${t('booking.participantsSheet')}: ${participants.map((p) => p.user.fullname).join(', ')}`}
                 onPress={() => setPeople(true)}
-                className="min-h-[44px] flex-row items-center active:opacity-80"
+                className="min-h-[44px] flex-row items-center gap-2.5 border-t border-line-2 pt-2 active:opacity-70"
               >
-                {participants.slice(0, participants.length > AVATARS ? AVATARS - 1 : AVATARS).map((p, i) => (
-                  <View key={p.user.id} style={{ marginLeft: i === 0 ? 0 : -8 }}>
-                    <Avatar name={p.user.fullname} uri={p.user.avatarUrl} size={38} ring />
-                  </View>
-                ))}
-                {participants.length > AVATARS ? (
-                  <View className="h-[38px] w-[38px] items-center justify-center rounded-full border-2 border-surface bg-inverse" style={{ marginLeft: -8 }}>
-                    <Text weight="semibold" className="text-meta text-on-inverse">{`+${participants.length - (AVATARS - 1)}`}</Text>
-                  </View>
-                ) : null}
+                <AvatarStack size={26} max={4} people={others.map((p) => ({ name: p.user.fullname, uri: p.user.avatarUrl }))} />
+                <Text className="text-muted" style={{ fontSize: 13, lineHeight: 17 }}>
+                  {t('booking.andOthers', { count: others.length })}
+                </Text>
               </Pressable>
             ) : (
-              <Text className="flex-1 text-sub text-muted">{t('booking.addPeople')}</Text>
-            )}
-          </View>
-        </Section>
-
-        <Section title={t('booking.services')}>
-          {services.length ? (
-            <View className="gap-3">
-              {chunk(services, 4).map((row, r) => (
-                <View key={r} className="flex-row gap-2">
-                  {row.map((service) => {
-                    const selected = draft.serviceIds.some((id) => sameId(id, service.id));
-                    return (
-                      <Pressable
-                        key={service.id}
-                        testID={`booking-service-${service.code ?? service.id}`}
-                        accessibilityRole="checkbox"
-                        accessibilityState={{ checked: selected }}
-                        accessibilityLabel={service.name}
-                        onPress={() => patch({ serviceIds: selected ? draft.serviceIds.filter((id) => !sameId(id, service.id)) : [...draft.serviceIds, service.id] })}
-                        className="flex-1 items-center gap-[7px] active:opacity-70"
-                      >
-                        <RoundIcon icon={serviceIcon(service.name)} size={54} tone={selected ? 'solid' : 'brand'}>
-                          {selected ? (
-                            <View className="absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full bg-surface p-0.5">
-                              <View className="flex-1 items-center justify-center rounded-full bg-success">
-                                <Icon icon={CheckIcon} size={10} weight="bold" rawColor="#FFFFFF" />
-                              </View>
-                            </View>
-                          ) : null}
-                        </RoundIcon>
-                        <Text weight="medium" numberOfLines={2} className="text-center text-meta">
-                          {service.name}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                  {Array.from({ length: 4 - row.length }, (_, i) => (
-                    <View key={`pad-${i}`} className="flex-1" />
-                  ))}
-                </View>
-              ))}
-            </View>
-          ) : (
-            <Text className="text-sub text-muted">{t('booking.noServices')}</Text>
-          )}
-        </Section>
-
-        <Section title={t('booking.documents')} right={<Text className="text-meta text-subtle">{t('booking.documentsLimit', { count: documentCount })}</Text>}>
-          <View className="flex-row flex-wrap gap-2">
-            {draft.keptAttachments.map((a) => (
-              <DocumentChip key={a.id} name={a.name ?? ''} onPress={() => confirmRemove(a.name ?? '', () => patch({ keptAttachments: draft.keptAttachments.filter((x) => x.id !== a.id) }))} />
-            ))}
-            {draft.files.map((file, index) => (
-              <DocumentChip key={`${file.uri}-${index}`} name={file.name} onPress={() => confirmRemove(file.name, () => patch({ files: draft.files.filter((_, i) => i !== index) }))} />
-            ))}
-            {draft.links.map((link, index) => (
-              <DocumentChip key={`${link}-${index}`} name={link} link onPress={() => confirmRemove(link, () => patch({ links: draft.links.filter((_, i) => i !== index) }))} />
-            ))}
-            {documentCount < MAX_DOCUMENTS ? (
-              <Pressable
-                testID="booking-add-document"
-                accessibilityRole="button"
-                accessibilityLabel={t('booking.addDocument')}
-                onPress={addDocument}
-                className="h-11 w-11 items-center justify-center rounded-[12px] border-[1.5px] border-dashed border-line-strong active:opacity-70"
-              >
-                <Icon icon={PlusIcon} size={18} color="muted" />
+              <Pressable testID="booking-participants" accessibilityRole="button" onPress={() => setPeople(true)} className="min-h-[36px] justify-center border-t border-line-2 pt-1 active:opacity-70">
+                <Text weight="semibold" className="text-primary" style={{ fontSize: 12.5, lineHeight: 16 }}>
+                  {host ? t('booking.hostIs', { name: host.user.fullname ?? '' }) : t('booking.noHost')}
+                </Text>
               </Pressable>
-            ) : null}
-          </View>
-        </Section>
+            )}
+          </>
+        ) : (
+          <Text className="py-2 text-muted" style={{ fontSize: 13, lineHeight: 17 }}>
+            {t('booking.noParticipants')}
+          </Text>
+        )}
+      </Card>
 
-        <Section title={t('booking.moreInfo')}>
-          <TextField
-            appearance="ios"
-            label={t('booking.otherParticipants')}
-            placeholder={t('booking.otherParticipantsPlaceholder')}
-            value={draft.participantText}
-            onChangeText={(participantText) => patch({ participantText })}
-          />
-          <TextField appearance="ios" label={t('booking.phone')} keyboardType="phone-pad" value={draft.phone || phone} onChangeText={(value) => patch({ phone: value })} maxLength={20} />
-        </Section>
-      </ScrollView>
+      <Card className="gap-3 p-4">
+        <View className="flex-row items-center justify-between">
+          <Text weight="bold" accessibilityRole="header" style={{ fontSize: 15, lineHeight: 20 }}>
+            {t('booking.services')}
+          </Text>
+          {draft.serviceIds.length ? <Tag kind="wait" label={t('booking.servicesSelected', { count: draft.serviceIds.length })} /> : null}
+        </View>
+        {services.length ? (
+          <View className="gap-2">
+            {chunk(services, 4).map((row, r) => (
+              <View key={r} className="flex-row gap-2">
+                {row.map((service) => {
+                  const selected = draft.serviceIds.some((id) => sameId(id, service.id));
+                  return (
+                    <Pressable
+                      key={service.id}
+                      testID={`booking-service-${service.code ?? service.id}`}
+                      accessibilityRole="checkbox"
+                      accessibilityState={{ checked: selected }}
+                      accessibilityLabel={service.name}
+                      onPress={() => patch({ serviceIds: selected ? draft.serviceIds.filter((id) => !sameId(id, service.id)) : [...draft.serviceIds, service.id] })}
+                      className="min-h-[78px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-[14px] px-1 py-2.5 active:opacity-80"
+                      style={{ backgroundColor: selected ? colors['primary-tint'] : colors.panel, borderWidth: 1.5, borderColor: selected ? colors.primary : 'transparent' }}
+                    >
+                      <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={{ backgroundColor: selected ? colors.primary : colors.elevated }}>
+                        <Icon icon={serviceIcon(service.name)} size={18} rawColor={selected ? colors['on-primary'] : colors.warning} />
+                      </View>
+                      <Text weight="semibold" numberOfLines={2} className="text-center" style={{ fontSize: 11.5, lineHeight: 14, color: selected ? colors.primary : colors.ink }}>
+                        {service.name}
+                      </Text>
+                      {selected ? (
+                        <View className="absolute right-1 top-1 h-4 w-4 items-center justify-center rounded-full bg-primary">
+                          <Icon icon={CheckIcon} size={10} weight="bold" color="on-primary" />
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+                {Array.from({ length: 4 - row.length }, (_, i) => (
+                  <View key={`pad-${i}`} className="flex-1" />
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text className="text-sub text-muted">{t('booking.noServices')}</Text>
+        )}
+      </Card>
+
+      <Card className="gap-3 p-4">
+        <View className="flex-row items-center justify-between">
+          <Text weight="bold" accessibilityRole="header" style={{ fontSize: 15, lineHeight: 20 }}>
+            {t('booking.documents')}
+          </Text>
+          <Text className="text-subtle" style={{ fontSize: 11.5, lineHeight: 15 }}>
+            {t('booking.documentsLimit', { count: documentCount })}
+          </Text>
+        </View>
+        <View className="flex-row flex-wrap gap-2">
+          {draft.keptAttachments.map((a) => (
+            <DocumentChip key={a.id} name={a.name ?? ''} onPress={() => confirmRemove(a.name ?? '', () => patch({ keptAttachments: draft.keptAttachments.filter((x) => x.id !== a.id) }))} />
+          ))}
+          {draft.files.map((file, index) => (
+            <DocumentChip key={`${file.uri}-${index}`} name={file.name} onPress={() => confirmRemove(file.name, () => patch({ files: draft.files.filter((_, i) => i !== index) }))} />
+          ))}
+          {draft.links.map((link, index) => (
+            <DocumentChip key={`${link}-${index}`} name={link} link onPress={() => confirmRemove(link, () => patch({ links: draft.links.filter((_, i) => i !== index) }))} />
+          ))}
+          {documentCount < MAX_DOCUMENTS ? (
+            <Pressable
+              testID="booking-add-document"
+              accessibilityRole="button"
+              accessibilityLabel={t('booking.addDocument')}
+              onPress={addDocument}
+              className="h-11 w-11 items-center justify-center rounded-[12px] border-[1.5px] border-dashed border-line-strong active:opacity-70"
+            >
+              <Icon icon={PlusIcon} size={18} color="muted" />
+            </Pressable>
+          ) : null}
+        </View>
+      </Card>
+
+      <Card className="gap-3 p-4">
+        <Text weight="bold" accessibilityRole="header" style={{ fontSize: 15, lineHeight: 20 }}>
+          {t('booking.moreInfo')}
+        </Text>
+        <TextField
+          appearance="ios"
+          label={t('booking.otherParticipants')}
+          placeholder={t('booking.otherParticipantsPlaceholder')}
+          value={draft.participantText}
+          onChangeText={(participantText) => patch({ participantText })}
+        />
+        <TextField appearance="ios" label={t('booking.phone')} keyboardType="phone-pad" value={draft.phone || phone} onChangeText={(value) => patch({ phone: value })} maxLength={20} />
+      </Card>
 
       <UserPicker<PersonOf<RoomUser>>
         testID="booking-user-picker"
@@ -359,7 +413,7 @@ export function DetailsStep() {
           error={linkError ?? undefined}
         />
       </BottomSheet>
-    </ScreenShell>
+    </ModuleScreen>
   );
 }
 
@@ -369,16 +423,20 @@ function chunk<T>(items: T[], size: number): T[][] {
   return rows;
 }
 
-function Section({ title, right, children }: { title: string; right?: ReactNode; children: ReactNode }) {
+/** Card heading with an optional "+ Thêm" style link. */
+function CardTitle({ title, action, onAction, actionTestID }: { title: string; action?: string; onAction?: () => void; actionTestID?: string }) {
   return (
-    <View className="gap-2.5">
-      <View className="flex-row items-baseline justify-between gap-3">
-        <Text weight="semibold" accessibilityRole="header" numberOfLines={1} className="flex-shrink text-card">
-          {title}
-        </Text>
-        {right}
-      </View>
-      {children}
+    <View className="flex-row items-center justify-between gap-3 pb-1">
+      <Text weight="bold" accessibilityRole="header" numberOfLines={1} className="flex-shrink" style={{ fontSize: 15, lineHeight: 20 }}>
+        {title}
+      </Text>
+      {action && onAction ? (
+        <Pressable testID={actionTestID} accessibilityRole="button" onPress={onAction} hitSlop={10} className="active:opacity-60">
+          <Text weight="bold" className="text-primary" style={{ fontSize: 13, lineHeight: 17 }}>
+            {action}
+          </Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -396,7 +454,7 @@ function DocumentChip({ name, link, onPress }: { name: string; link?: boolean; o
       style={{ flexGrow: 1, flexBasis: 140 }}
     >
       {link ? (
-        <Icon icon={LinkSimpleIcon} size={16} color="primary" />
+        <Icon icon={LinkIcon} size={16} color="primary" />
       ) : (
         <View className="rounded-[5px] bg-danger-tint px-1.5 py-0.5">
           <Text mono weight="semibold" className="text-meta-sm text-danger-text">

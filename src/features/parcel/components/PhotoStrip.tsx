@@ -10,7 +10,10 @@ import { Text } from '@/shared/ui/Text';
 import { resolveParcelFileUrl } from '../api';
 import type { ParcelAttachment } from '../types';
 
-/** 64×64 thumbnails (design 6e) with a full-screen pager. */
+/** Thumbnails keep the width of a 4-column row even with fewer photos. */
+const MIN_SLOTS = 4;
+
+/** 64pt-tall thumbnails sharing the card width (design 6e) with a full-screen pager. */
 export function PhotoStrip({ attachments }: { attachments: ParcelAttachment[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const { width, height } = useWindowDimensions();
@@ -18,11 +21,14 @@ export function PhotoStrip({ attachments }: { attachments: ParcelAttachment[] })
   if (!attachments.length) return null;
   return (
     <>
-      <View className="flex-row flex-wrap gap-2">
+      <View className="flex-row gap-2">
         {attachments.map((a, index) => (
-          <Pressable key={a.id} accessibilityRole="imagebutton" accessibilityLabel={a.fileName} onPress={() => setOpenIndex(index)} className="active:opacity-80">
-            <Image source={{ uri: resolveParcelFileUrl(a.filePath) }} style={{ width: 64, height: 64, borderRadius: 12 }} contentFit="cover" transition={150} />
+          <Pressable key={a.id} accessibilityRole="imagebutton" accessibilityLabel={a.fileName} onPress={() => setOpenIndex(index)} className="h-16 flex-1 active:opacity-80">
+            <Image source={{ uri: resolveParcelFileUrl(a.filePath) }} style={{ width: '100%', height: 64, borderRadius: 12 }} contentFit="cover" transition={150} />
           </Pressable>
+        ))}
+        {Array.from({ length: Math.max(0, MIN_SLOTS - attachments.length) }, (_, i) => (
+          <View key={`slot-${i}`} className="flex-1" />
         ))}
       </View>
       <Modal visible={openIndex !== null} transparent animationType="fade" onRequestClose={() => setOpenIndex(null)} statusBarTranslucent>

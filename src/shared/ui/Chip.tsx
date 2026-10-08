@@ -3,7 +3,7 @@ import { Pressable } from 'react-native';
 import { cn } from '@/shared/lib/cn';
 
 import { Icon } from './Icon';
-import { CaretDownIcon, CheckIcon } from './icons';
+import { ChevronDownIcon, CheckIcon } from './icons';
 import { Text } from './Text';
 
 type FilterChipProps = {
@@ -32,7 +32,7 @@ export function FilterChip({ label, selected, dropdown, onPress, testID }: Filte
       <Text weight={selected ? 'semibold' : 'medium'} numberOfLines={1} className={cn('text-sub', selected ? 'text-on-inverse' : 'text-ink-2')}>
         {label}
       </Text>
-      {dropdown ? <Icon icon={CaretDownIcon} size={14} weight="bold" color={selected ? 'on-inverse' : 'muted'} /> : null}
+      {dropdown ? <Icon icon={ChevronDownIcon} size={14} weight="bold" color={selected ? 'on-inverse' : 'muted'} /> : null}
     </Pressable>
   );
 }

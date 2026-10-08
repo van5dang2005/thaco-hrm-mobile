@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 import { cn } from '@/shared/lib/cn';
 
 import { Icon } from './Icon';
-import { type AppIcon, CaretRightIcon } from './icons';
+import { type AppIcon, ChevronRightIcon } from './icons';
 import { RoundIcon, type RoundIconTone } from './RoundIcon';
 import { Text } from './Text';
 
@@ -39,7 +39,7 @@ export function InfoRow({ label, value, mono, icon, iconTone = 'wait', onPress, 
         ) : (
           value
         )}
-        {onPress ? <Icon icon={CaretRightIcon} size={15} color="subtle" /> : null}
+        {onPress ? <Icon icon={ChevronRightIcon} size={15} color="subtle" /> : null}
       </View>
     </>
   );

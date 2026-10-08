@@ -30,6 +30,11 @@ describe('parcelDeadline', () => {
     expect(parcelDeadline(parcel, new Date('2026-10-20T00:00:00Z'))!.progress).toBe(1);
   });
 
+  it('fills the card bar on the way to the due day (day 7), full once overdue', () => {
+    expect(parcelDeadline(parcel, new Date('2026-10-05T01:10:00Z'))!.dueProgress).toBeCloseTo(6 / 7);
+    expect(parcelDeadline(parcel, new Date('2026-10-08T01:10:00Z'))!.dueProgress).toBe(1);
+  });
+
   it('falls back to receivedAt when the lookup has no createdAt, and to null without dates', () => {
     expect(parcelDeadline({ receivedAt: parcel.receivedAt }, new Date('2026-10-05T03:00:00Z'))!.dueKey).toBe('2026-10-06');
     expect(parcelDeadline({}, new Date())).toBeNull();
@@ -37,7 +42,7 @@ describe('parcelDeadline', () => {
 });
 
 describe('parcelTabs', () => {
-  it('"Đang chờ" covers Waiting and Due; the other chips one status each', () => {
+  it('"Chờ nhận" covers Waiting and Due; the other tabs one status each', () => {
     expect(parcelTabs.pending).toEqual([ParcelStatus.Waiting, ParcelStatus.Due]);
     expect(parcelTabs.overdue).toEqual([ParcelStatus.Overdue]);
     expect(parcelTabs.handed).toEqual([ParcelStatus.HandedOver]);

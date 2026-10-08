@@ -6,7 +6,7 @@ import { cn } from '@/shared/lib/cn';
 
 import { Button } from './Button';
 import { Icon } from './Icon';
-import { type AppIcon, WarningCircleIcon } from './icons';
+import { type AppIcon, CircleAlertIcon } from './icons';
 import { Text } from './Text';
 
 type EmptyProps = {
@@ -40,7 +40,7 @@ export function ErrorState({ error, onRetry, className, compact }: ErrorProps) {
   const message = useErrorMessage(error);
   return (
     <View className={cn('items-center gap-3 px-6', compact ? 'py-6' : 'py-12', className)}>
-      <Icon icon={WarningCircleIcon} size={26} color="danger" />
+      <Icon icon={CircleAlertIcon} size={26} color="danger" />
       <Text className="text-center text-body text-ink-2">{message}</Text>
       {onRetry ? <Button label={t('common.retry')} size="sm" variant="ghost" onPress={onRetry} /> : null}
     </View>

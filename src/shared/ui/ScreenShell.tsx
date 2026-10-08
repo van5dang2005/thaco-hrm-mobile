@@ -11,10 +11,23 @@ import { cn } from '@/shared/lib/cn';
 /** Translucent white for controls on the blue header (pills, stats, segmented, unselected days). */
 export const onBlue = (alpha: number) => `rgba(255, 255, 255, ${alpha})`;
 
-/** Text colors on the blue header: `fg` titles, `sub` secondary (#D4E3F2), `muted` tertiary (#A9C6E4). */
+/**
+ * Colors on the blue header: `fg` titles, `sub` secondary (#D4E3F2), `muted` tertiary (#A9C6E4).
+ * v3: `text2` subtitles (#C9DCEF), `text3` small caps labels (#9CC4EC), `soft` unselected segments
+ * (#DCE8F4), `accent` highlights (#FFD38A).
+ */
 export function useHeaderColors() {
   const { colors } = useTheme();
-  return { bg: colors.header, fg: colors['header-name'], sub: colors['header-job'], muted: colors['header-dept'] };
+  return {
+    bg: colors.header,
+    fg: colors['header-name'],
+    sub: colors['header-job'],
+    muted: colors['header-dept'],
+    text2: colors['header-text-2'],
+    text3: colors['header-text-3'],
+    soft: colors['header-text-soft'],
+    accent: colors['header-warn-text'],
+  };
 }
 
 /** Light status bar while a blue-header screen is focused. */

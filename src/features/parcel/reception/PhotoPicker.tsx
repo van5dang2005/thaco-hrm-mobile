@@ -6,7 +6,7 @@ import { Pressable, View } from 'react-native';
 
 import { Button } from '@/shared/ui/Button';
 import { Icon } from '@/shared/ui/Icon';
-import { CameraIcon, CameraPlusIcon, XIcon } from '@/shared/ui/icons';
+import { CameraIcon, ImagePlusIcon, XIcon } from '@/shared/ui/icons';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
 
@@ -114,7 +114,7 @@ export function PhotoPicker({ kept, onRemoveKept, files, onChangeFiles, disabled
       {slots > 0 && !disabled ? (
         <View className="flex-row gap-2">
           <Button testID="parcel-form-camera" className="flex-1" size="lg" variant="soft" icon={CameraIcon} label={t('reception.takePhoto')} onPress={() => void takePhoto()} />
-          <Button testID="parcel-form-library" className="flex-1" size="lg" variant="ghost" icon={CameraPlusIcon} label={t('reception.pickPhoto')} onPress={() => void pickPhotos()} />
+          <Button testID="parcel-form-library" className="flex-1" size="lg" variant="ghost" icon={ImagePlusIcon} label={t('reception.pickPhoto')} onPress={() => void pickPhotos()} />
         </View>
       ) : null}
     </View>

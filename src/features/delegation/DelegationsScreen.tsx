@@ -15,10 +15,11 @@ import { isOpenParcel } from '@/features/parcel/logic';
 import { DelegationStatus, DelegationType, MatchReason, type DelegationDto } from '@/features/parcel/types';
 import { Button } from '@/shared/ui/Button';
 import { DatePickerSheet } from '@/shared/ui/DatePickerSheet';
-import { HeaderBar } from '@/shared/ui/HeaderBar';
+import { HeaderIconButton } from '@/shared/ui/HeaderBar';
 import { HeaderSegmented } from '@/shared/ui/HeaderSegmented';
-import { PlusIcon, UsersIcon } from '@/shared/ui/icons';
-import { ScreenShell } from '@/shared/ui/ScreenShell';
+import { CheckIcon, InboxIcon, PlusIcon, SendIcon, TrashIcon, UsersIcon, UserCheckIcon, XIcon } from '@/shared/ui/icons';
+import { ModuleHeader } from '@/shared/ui/ModuleHeader';
+import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/shared/ui/StateViews';
 import { toast } from '@/shared/ui/Toast';
@@ -61,6 +62,7 @@ export function DelegationsScreen() {
   const mine = all.filter((d) => sameId(d.authorizerId, me.data?.id)).sort((a, b) => order[a.status] - order[b.status]);
   const toMe = all.filter((d) => sameId(d.delegatorId, me.data?.id)).sort((a, b) => order[a.status] - order[b.status]);
   const awaitingMe = toMe.filter((d) => d.status === DelegationStatus.Waiting).length;
+  const inForce = (list: DelegationDto[]) => list.filter((d) => d.status === DelegationStatus.Active || d.status === DelegationStatus.DueSoon).length;
   const list = tab === 'mine' ? mine : toMe;
 
   const refresh = () => {
@@ -124,8 +126,8 @@ export function DelegationsScreen() {
     if (tab === 'toMe') {
       if (d.status === DelegationStatus.Waiting) {
         buttons.push(
-          <Button key="decline" testID={`delegation-decline-${d.id}`} className="flex-1" size="sm" variant="danger" label={t('delegations.decline')} loading={reject.isPending} onPress={() => confirm(t('delegations.decline'), t('delegations.declineConfirm'), () => reject.mutate(d.id), true)} />,
-          <Button key="accept" testID={`delegation-accept-${d.id}`} className="flex-1" size="sm" label={t('delegations.accept')} loading={accept.isPending} onPress={() => accept.mutate(d.id)} />,
+          <Button key="decline" testID={`delegation-decline-${d.id}`} className="flex-1" size="sm" variant="danger-soft" icon={XIcon} label={t('delegations.decline')} loading={reject.isPending} onPress={() => confirm(t('delegations.decline'), t('delegations.declineConfirm'), () => reject.mutate(d.id), true)} />,
+          <Button key="accept" testID={`delegation-accept-${d.id}`} className="flex-[1.4]" size="sm" icon={CheckIcon} label={t('delegations.accept')} loading={accept.isPending} onPress={() => accept.mutate(d.id)} />,
         );
       }
       return buttons;
@@ -133,36 +135,54 @@ export function DelegationsScreen() {
     const editable = (d.status === DelegationStatus.Waiting && !d.pendingEndDate) || d.status === DelegationStatus.Rejected;
     if (isDefault && (d.status === DelegationStatus.Active || d.status === DelegationStatus.DueSoon)) {
       buttons.push(
-        <Button key="end" testID={`delegation-end-${d.id}`} className="flex-1" size="sm" variant="ghost" label={t('delegations.endEarly')} onPress={() => setEnding(d)} />,
-        <Button key="renew" testID={`delegation-renew-${d.id}`} className="flex-1" size="sm" variant="soft" label={t('delegations.renew')} onPress={() => setRenewing(d)} />,
+        <Button key="end" testID={`delegation-end-${d.id}`} className="flex-1" size="sm" variant="neutral" label={t('delegations.endEarly')} onPress={() => setEnding(d)} />,
+        <Button key="renew" testID={`delegation-renew-${d.id}`} className="flex-1" size="sm" label={t('delegations.renew')} onPress={() => setRenewing(d)} />,
       );
     } else {
       buttons.push(
-        <Button key="remove" testID={`delegation-remove-${d.id}`} className="flex-1" size="sm" variant="danger" label={t('delegations.remove')} onPress={() => confirm(t('delegations.remove'), t('delegations.removeConfirm'), () => remove.mutate(d.id), true)} />,
+        <Button key="remove" testID={`delegation-remove-${d.id}`} className="flex-1" size="sm" variant="danger-soft" icon={TrashIcon} label={t('delegations.remove')} onPress={() => confirm(t('delegations.remove'), t('delegations.removeConfirm'), () => remove.mutate(d.id), true)} />,
       );
       if (editable) buttons.push(<Button key="change" className="flex-1" size="sm" variant="ghost" label={t('delegations.changePerson')} onPress={() => setChanging(d)} />);
     }
     return buttons;
   };
 
+  const create = () => router.push('/parcels/delegations/new');
+  // Cards start on the blue (6f / 6g); empty, loading and error states sit below it.
+  const overlap = !delegations.isLoading && !delegations.isError && list.length > 0;
   const header = (
-    <>
-      <HeaderBar title={t('delegations.title')} />
+    <ModuleHeader
+      testID="delegations-header"
+      icon={UserCheckIcon}
+      title={t('delegations.title')}
+      right={<HeaderIconButton testID="delegations-create" variant="solid" icon={PlusIcon} label={t('delegations.create')} onPress={create} />}
+      bottom={overlap ? 18 : 24}
+    >
       <HeaderSegmented
+        testID="delegations-tabs"
+        className=""
+        size="lg"
         value={tab}
         onChange={setTab}
         options={[
-          { value: 'mine', label: t('delegations.mine'), testID: 'delegations-tab-mine' },
-          { value: 'toMe', label: t('delegations.toMe'), badge: awaitingMe, testID: 'delegations-tab-tome' },
+          { value: 'mine', label: t('delegations.mine'), sublabel: t('delegations.inForce', { count: inForce(mine) }), icon: SendIcon, testID: 'delegations-tab-mine' },
+          {
+            value: 'toMe',
+            label: t('delegations.toMe'),
+            sublabel: awaitingMe ? t('delegations.awaitingCount', { count: awaitingMe }) : t('delegations.inForce', { count: inForce(toMe) }),
+            icon: InboxIcon,
+            badge: awaitingMe,
+            testID: 'delegations-tab-tome',
+          },
         ]}
       />
-    </>
+    </ModuleHeader>
   );
 
   return (
-    <ScreenShell
+    <ModuleScreen
       header={header}
-      footer={tab === 'mine' ? <Button testID="delegations-create" className="flex-1" icon={PlusIcon} label={t('delegations.create')} onPress={() => router.push('/parcels/delegations/new')} /> : undefined}
+      overlap={overlap}
       refreshControl={<RefreshControl refreshing={delegations.isRefetching} onRefresh={() => void Promise.all([delegations.refetch(), myParcels.refetch()])} />}
     >
       {delegations.isLoading ? (
@@ -174,7 +194,7 @@ export function DelegationsScreen() {
           icon={UsersIcon}
           message={tab === 'mine' ? t('delegations.emptyMine') : t('delegations.emptyToMe')}
           actionLabel={tab === 'mine' ? t('delegations.create') : undefined}
-          onAction={tab === 'mine' ? () => router.push('/parcels/delegations/new') : undefined}
+          onAction={tab === 'mine' ? create : undefined}
         />
       ) : (
         list.map((d) =>
@@ -221,6 +241,6 @@ export function DelegationsScreen() {
         search={async (keyword) => (await parcelsApi.searchUsers(keyword)).items.map(parcelPerson)}
         onSelect={(person) => changing && change.mutate({ d: changing, user: person.user })}
       />
-    </ScreenShell>
+    </ModuleScreen>
   );
 }

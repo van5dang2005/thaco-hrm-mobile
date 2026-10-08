@@ -3,23 +3,31 @@ import { useTheme } from '@/core/theme/ThemeProvider';
 
 import type { AppIcon, IconWeight } from './icons';
 
+const strokeFor: Record<IconWeight, number> = { light: 1.5, regular: 1.8, bold: 2.2, fill: 2.2 };
+
 export type IconProps = {
   icon: AppIcon;
   size?: number;
   color?: ColorToken;
   /** Raw color, wins over `color`. Use only for colors outside the palette (e.g. white on primary). */
   rawColor?: string;
-  /**
-   * `regular` for inline glyphs, `bold` for tiny marks (checks, ✕ on chips) that must stay legible,
-   * `fill` for the selected state (active tab), `duotone` for module and empty-state illustrations.
-   */
+  /** Stroke width preset (design: 1.8–2); `bold` for tiny marks (checks, ✕ on chips) that must stay legible. */
   weight?: IconWeight;
+  /** Explicit stroke width, wins over `weight`. */
+  strokeWidth?: number;
   /** Mirror for RTL-sensitive arrows. */
   mirrored?: boolean;
 };
 
-/** Phosphor icon in palette colors. Pick icons from `./icons`, never from the package root. */
-export function Icon({ icon: PhosphorComponent, size = 20, color = 'ink', rawColor, weight = 'regular', mirrored }: IconProps) {
+/** Lucide icon in palette colors. Pick icons from `./icons`, never from the package root. */
+export function Icon({ icon: LucideComponent, size = 20, color = 'ink', rawColor, weight = 'regular', strokeWidth, mirrored }: IconProps) {
   const { colors } = useTheme();
-  return <PhosphorComponent size={size} color={rawColor ?? colors[color]} weight={weight} mirrored={mirrored} duotoneOpacity={0.22} />;
+  return (
+    <LucideComponent
+      size={size}
+      color={rawColor ?? colors[color]}
+      strokeWidth={strokeWidth ?? strokeFor[weight]}
+      style={mirrored ? { transform: [{ scaleX: -1 }] } : undefined}
+    />
+  );
 }

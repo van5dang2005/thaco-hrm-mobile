@@ -25,7 +25,7 @@ type Props = {
   testID?: string;
 };
 
-/** Week of day cells on the blue header (5b); swipe sideways to change week. */
+/** Week of day cells on the blue header (5b, v3 cells like DayStrip); swipe sideways to change week. */
 export function WeekStrip({ weekStart, onWeekChange, value, onChange, today, bookings, testID = 'week' }: Props) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -43,7 +43,7 @@ export function WeekStrip({ weekStart, onWeekChange, value, onChange, today, boo
   const onLayout = (event: LayoutChangeEvent) => setWidth(event.nativeEvent.layout.width);
 
   return (
-    <View testID={testID} onLayout={onLayout} className="pt-3.5" accessibilityRole="tablist">
+    <View testID={testID} onLayout={onLayout} accessibilityRole="tablist">
       {width > 0 ? (
         <FlatList
           ref={listRef}
@@ -59,10 +59,11 @@ export function WeekStrip({ weekStart, onWeekChange, value, onChange, today, boo
             if (next && next !== weekStart) onWeekChange(next);
           }}
           renderItem={({ item: start }) => (
-            <View style={{ width }} className="flex-row gap-1.5 px-1">
+            <View style={{ width }} className="flex-row gap-1">
               {weekKeys(start).map((key) => {
                 const selected = key === value;
                 const weekday = weekdayOf(key);
+                const weekend = weekday === 0 || weekday === 6;
                 const dots = meetingDots(bookings, key);
                 const fg = selected ? colors.header : colors['header-name'];
                 return (
@@ -73,18 +74,18 @@ export function WeekStrip({ weekStart, onWeekChange, value, onChange, today, boo
                     accessibilityState={{ selected }}
                     accessibilityLabel={`${t(`time.weekday.${String(weekday) as '0'}`)} ${parseDateKey(key).day}${dots ? `, ${t('booking.hasMeetings')}` : ''}`}
                     onPress={() => onChange(key)}
-                    className="flex-1 items-center justify-center rounded-[16px] active:opacity-80"
-                    style={{ height: 58, gap: 1, backgroundColor: selected ? colors['header-name'] : onBlue(0.1) }}
+                    className="h-14 flex-1 items-center justify-center gap-0.5 rounded-[14px] active:opacity-80"
+                    style={{ backgroundColor: selected ? colors['header-name'] : 'transparent', opacity: !selected && weekend ? 0.45 : 1 }}
                   >
-                    <Text weight="medium" numberOfLines={1} maxFontSizeMultiplier={1.2} className="text-meta" style={{ color: fg, opacity: selected ? 1 : 0.85 }}>
+                    <Text weight={selected ? 'bold' : 'medium'} numberOfLines={1} maxFontSizeMultiplier={1.2} style={{ fontSize: 11, lineHeight: 14, color: selected ? colors.header : onBlue(0.75) }}>
                       {t(`time.weekdayShort.${String(weekday) as '0'}`)}
                     </Text>
-                    <Text weight="bold" numeric maxFontSizeMultiplier={1.2} style={{ color: fg, fontSize: 17, lineHeight: 21 }}>
+                    <Text weight="bold" numeric maxFontSizeMultiplier={1.2} style={{ color: fg, fontSize: 18, lineHeight: 22 }}>
                       {String(parseDateKey(key).day).padStart(2, '0')}
                     </Text>
                     <View className="h-1 flex-row gap-[3px]">
                       {Array.from({ length: dots }, (_, i) => (
-                        <View key={i} className="h-1 w-1 rounded-full" style={{ backgroundColor: fg }} />
+                        <View key={i} className="h-1 w-1 rounded-full" style={{ backgroundColor: selected ? colors.header : onBlue(0.8) }} />
                       ))}
                     </View>
                   </Pressable>
@@ -94,7 +95,7 @@ export function WeekStrip({ weekStart, onWeekChange, value, onChange, today, boo
           )}
         />
       ) : (
-        <View style={{ height: 58 }} />
+        <View style={{ height: 56 }} />
       )}
     </View>
   );

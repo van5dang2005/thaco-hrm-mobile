@@ -14,7 +14,7 @@ import { Button } from '@/shared/ui/Button';
 import { PressableCard } from '@/shared/ui/Card';
 import { HeaderBar, HeaderPillButton } from '@/shared/ui/HeaderBar';
 import { HeaderSegmented } from '@/shared/ui/HeaderSegmented';
-import { type AppIcon, BellIcon, CalendarCheckIcon, ChecksIcon, PackageIcon, UsersIcon } from '@/shared/ui/icons';
+import { type AppIcon, BellIcon, CalendarCheckIcon, CheckCheckIcon, PackageIcon, UsersIcon } from '@/shared/ui/icons';
 import { RoundIcon } from '@/shared/ui/RoundIcon';
 import { ScreenShell, SHEET_PADDING } from '@/shared/ui/ScreenShell';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
@@ -127,8 +127,9 @@ export function NotificationsScreen() {
   const header = (
     <>
       <HeaderBar
+        icon={BellIcon}
         title={t('notifications.title')}
-        right={unread > 0 ? <HeaderPillButton testID="notifications-mark-all" icon={ChecksIcon} label={t('notifications.markAllRead')} onPress={() => markAll.mutate()} /> : undefined}
+        right={unread > 0 ? <HeaderPillButton testID="notifications-mark-all" icon={CheckCheckIcon} label={t('notifications.markAllRead')} onPress={() => markAll.mutate()} /> : undefined}
       />
       {available.length > 1 ? (
         <HeaderSegmented

@@ -29,8 +29,10 @@ export type Deadline = {
   cancelKey: DateKey;
   /** Calendar days until dueKey (negative when overdue). */
   daysLeft: number;
-  /** 0…1 position on the 10-day lifecycle. */
+  /** 0…1 position on the 10-day lifecycle (detail header). */
   progress: number;
+  /** 0…1 position on the way to the due day, full once overdue (list cards). */
+  dueProgress: number;
 };
 
 export function parcelDeadline(p: WithDates, now = new Date()): Deadline | null {
@@ -45,13 +47,14 @@ export function parcelDeadline(p: WithDates, now = new Date()): Deadline | null 
     cancelKey: addDays(startKey, CANCEL_DAY),
     daysLeft: diffDays(todayKey(now), dueKey),
     progress: Math.min(1, Math.max(0.02, elapsed / CANCEL_DAY)),
+    dueProgress: Math.min(1, Math.max(0.02, elapsed / OVERDUE_DAY)),
   };
 }
 
 export const isOpenParcel = (status: ParcelStatus) =>
   status === ParcelStatus.Waiting || status === ParcelStatus.Due || status === ParcelStatus.Overdue;
 
-/** Statuses of the "Đang chờ / Quá hạn / Đã bàn giao / Đã hủy" chips (3i). */
+/** Statuses of the "Chờ nhận / Quá hạn / Đã nhận / Đã hủy" tabs (6d). */
 export const parcelTabs = {
   pending: [ParcelStatus.Waiting, ParcelStatus.Due],
   overdue: [ParcelStatus.Overdue],

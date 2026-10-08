@@ -11,13 +11,14 @@ import { useSessionStore } from '@/core/session/sessionStore';
 import { useDebounced } from '@/shared/hooks/useDebounced';
 import { Button } from '@/shared/ui/Button';
 import { FilterChip } from '@/shared/ui/Chip';
-import { HeaderBar, HeaderPillButton } from '@/shared/ui/HeaderBar';
-import { HeaderChips } from '@/shared/ui/HeaderChips';
-import { HeaderStat, HeaderStatRow } from '@/shared/ui/HeaderStat';
-import { LockIcon, MagnifyingGlassIcon, PackageIcon, PlusIcon } from '@/shared/ui/icons';
-import { ScreenShell, SHEET_PADDING } from '@/shared/ui/ScreenShell';
+import { FloatingCard } from '@/shared/ui/Card';
+import { HeaderIconButton } from '@/shared/ui/HeaderBar';
+import { BuildingIcon, CheckCheckIcon, HourglassIcon, InboxIcon, LockIcon, PackageIcon, PlusIcon, SearchIcon, TriangleAlertIcon } from '@/shared/ui/icons';
+import { ModuleHeader } from '@/shared/ui/ModuleHeader';
+import { CONTENT_PADDING, ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { SelectSheet } from '@/shared/ui/SelectSheet';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
+import { StatStrip } from '@/shared/ui/StatStrip';
 import { EmptyState, ErrorState } from '@/shared/ui/StateViews';
 import { Text } from '@/shared/ui/Text';
 import { TextField } from '@/shared/ui/TextField';
@@ -77,39 +78,43 @@ export function ReceptionListScreen() {
 
   if (!capsLoading && !allowed) {
     return (
-      <ScreenShell header={<HeaderBar title={t('reception.title')} />}>
+      <ModuleScreen header={<ModuleHeader icon={InboxIcon} title={t('reception.title')} bottom={24} />}>
         <EmptyState icon={LockIcon} message={t('errors.FORBIDDEN')} />
-      </ScreenShell>
+      </ModuleScreen>
     );
   }
 
+  const create = () => router.push('/parcels/reception/new');
   const header = (
-    <>
-      <HeaderBar
-        title={t('reception.title')}
-        right={<HeaderPillButton testID="reception-create" icon={PlusIcon} label={t('reception.create')} onPress={() => router.push('/parcels/reception/new')} />}
-      />
-      <HeaderStatRow>
-        <HeaderStat value={stats.data?.total} label={t('reception.statTotal')} />
-        <HeaderStat value={stats.data?.waiting} label={t('reception.statWaiting')} />
-        <HeaderStat value={stats.data?.overdue} label={t('reception.statOverdue')} />
-        <HeaderStat value={stats.data?.handedOver} label={t('reception.statHanded')} />
-      </HeaderStatRow>
-      <HeaderChips
-        testID="reception-status"
-        value={status === undefined ? 'all' : String(status)}
-        onChange={(value) => changeFilter(() => setStatus(value === 'all' ? undefined : (Number(value) as ParcelStatus)))}
-        options={[
-          { value: 'all', label: t('reception.allStatuses'), testID: 'reception-status-all' },
-          ...statusChips.map((s) => ({ value: String(s), label: t(`status.parcel.${s}`), testID: `reception-status-${s}` })),
+    <ModuleHeader
+      testID="reception-header"
+      icon={InboxIcon}
+      title={t('reception.title')}
+      subtitle={department ? (department.name ?? department.code ?? undefined) : t('reception.allDepartments')}
+      onSubtitlePress={() => setPicker('department')}
+      subtitleIcon={BuildingIcon}
+      right={<HeaderIconButton testID="reception-create" variant="solid" icon={PlusIcon} label={t('reception.create')} onPress={create} />}
+    />
+  );
+
+  const floating = (
+    <FloatingCard>
+      <StatStrip
+        testID="reception-stats"
+        items={[
+          { key: 'total', icon: PackageIcon, tone: 'wait', value: stats.data?.total ?? '–', label: t('reception.statTotal') },
+          { key: 'waiting', icon: HourglassIcon, tone: 'warn', value: stats.data?.waiting ?? '–', label: t('reception.statWaiting') },
+          { key: 'overdue', icon: TriangleAlertIcon, tone: 'danger', value: stats.data?.overdue ?? '–', label: t('reception.statOverdue'), emphasize: !!stats.data?.overdue },
+          { key: 'handed', icon: CheckCheckIcon, tone: 'ok', value: stats.data?.handedOver ?? '–', label: t('reception.statHanded') },
         ]}
       />
-    </>
+    </FloatingCard>
   );
 
   return (
-    <ScreenShell
+    <ModuleScreen
       header={header}
+      floating={floating}
       scroll={false}
       overlay={
         selected.length ? (
@@ -129,12 +134,12 @@ export function ReceptionListScreen() {
         ) : null
       }
     >
-      <View className="gap-2.5 pb-1 pt-[18px]">
+      <View className="gap-2.5 pb-1 pt-3">
         <View className="px-4">
           <TextField
             testID="reception-search"
             filled
-            leftIcon={MagnifyingGlassIcon}
+            leftIcon={SearchIcon}
             value={search}
             onChangeText={setSearch}
             placeholder={t('reception.searchPlaceholder')}
@@ -145,13 +150,10 @@ export function ReceptionListScreen() {
           />
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-grow-0" contentContainerClassName="gap-2 px-4">
-          <FilterChip
-            testID="reception-department"
-            dropdown
-            selected={!!departmentId}
-            label={department ? t('reception.departmentChip', { name: department.name ?? department.code ?? '' }) : t('reception.allDepartments')}
-            onPress={() => setPicker('department')}
-          />
+          <FilterChip testID="reception-status-all" selected={status === undefined} label={t('reception.allStatuses')} onPress={() => changeFilter(() => setStatus(undefined))} />
+          {statusChips.map((s) => (
+            <FilterChip key={s} testID={`reception-status-${s}`} selected={status === s} label={t(`status.parcel.${s}`)} onPress={() => changeFilter(() => setStatus(s))} />
+          ))}
           <FilterChip testID="reception-range" dropdown selected={range !== 'all'} label={t(rangeLabels[range])} onPress={() => setPicker('range')} />
         </ScrollView>
       </View>
@@ -166,7 +168,7 @@ export function ReceptionListScreen() {
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: SHEET_PADDING.horizontal, paddingTop: 12, paddingBottom: selected.length ? 110 : SHEET_PADDING.bottom, gap: 10 }}
+          contentContainerStyle={{ paddingHorizontal: CONTENT_PADDING.horizontal, paddingTop: 12, paddingBottom: selected.length ? 110 : CONTENT_PADDING.bottom, gap: CONTENT_PADDING.gap }}
           renderItem={({ item }) => (
             <ReceptionParcelCard
               parcel={item}
@@ -189,7 +191,7 @@ export function ReceptionListScreen() {
             if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
           }}
           ListEmptyComponent={
-            <EmptyState icon={PackageIcon} message={t('reception.empty')} actionLabel={t('reception.create')} onAction={() => router.push('/parcels/reception/new')} />
+            <EmptyState icon={PackageIcon} message={t('reception.empty')} actionLabel={t('reception.create')} onAction={create} />
           }
           ListFooterComponent={query.isFetchingNextPage ? <Text className="py-4 text-center text-meta text-muted">{t('common.loadMore')}</Text> : null}
         />
@@ -215,6 +217,6 @@ export function ReceptionListScreen() {
         options={(Object.keys(rangeLabels) as ReceptionRange[]).map((value) => ({ value, label: t(rangeLabels[value]) }))}
         onSelect={(value) => changeFilter(() => setRange(value))}
       />
-    </ScreenShell>
+    </ModuleScreen>
   );
 }

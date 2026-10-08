@@ -1,7 +1,6 @@
 import { TextInput, type TextInputProps } from 'react-native';
 
-import { MAX_FONT_SCALE } from '@/core/theme/fonts';
-import { useFontStyle } from '@/core/theme/fontStore';
+import { MAX_FONT_SCALE, useFontStyle } from '@/core/theme/fonts';
 import { useTheme } from '@/core/theme/ThemeProvider';
 
 type Props = Omit<TextInputProps, 'style'> & {

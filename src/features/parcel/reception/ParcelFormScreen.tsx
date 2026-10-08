@@ -11,14 +11,15 @@ import { qk } from '@/core/query/keys';
 import { parcelPerson, type ParcelUser, type PersonOf } from '@/core/session/userTypes';
 import { atMinutes, formatKey, formatMinutes, minutesOfDay, parseServerDate, todayKey, toDateKey, type DateKey } from '@/core/time/vn';
 import { Banner } from '@/shared/ui/Banner';
+import { PackagePlusIcon, PencilIcon } from '@/shared/ui/icons';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { DatePickerSheet } from '@/shared/ui/DatePickerSheet';
 import { FieldBox } from '@/shared/ui/FieldBox';
-import { HeaderBar } from '@/shared/ui/HeaderBar';
+import { HeaderSegmented } from '@/shared/ui/HeaderSegmented';
 import { PersonRow } from '@/shared/ui/PersonRow';
-import { ScreenShell } from '@/shared/ui/ScreenShell';
-import { Segmented } from '@/shared/ui/Segmented';
+import { ModuleHeader } from '@/shared/ui/ModuleHeader';
+import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/StateViews';
 import { SwitchRow } from '@/shared/ui/SwitchRow';
@@ -53,9 +54,9 @@ export function ParcelFormScreen() {
   if (!id) return <ParcelFormBody />;
   if (parcel.data) return <ParcelFormBody parcel={parcel.data} />;
   return (
-    <ScreenShell header={<HeaderBar title={t('reception.formEditTitle')} />}>
+    <ModuleScreen header={<ModuleHeader icon={PencilIcon} title={t('reception.formEditTitle')} bottom={24} />}>
       {parcel.isError ? <ErrorState error={parcel.error} onRetry={() => void parcel.refetch()} /> : <ListSkeleton count={3} />}
-    </ScreenShell>
+    </ModuleScreen>
   );
 }
 
@@ -159,8 +160,22 @@ function ParcelFormBody({ parcel }: { parcel?: ParcelDto }) {
   const fileCount = keptIds.length + files.length;
 
   return (
-    <ScreenShell
-      header={<HeaderBar title={editing ? t('reception.formEditTitle') : t('reception.formTitle')} />}
+    <ModuleScreen
+      header={
+        <ModuleHeader icon={editing ? PencilIcon : PackagePlusIcon} title={editing ? t('reception.formEditTitle') : t('reception.formTitle')} bottom={24}>
+          {!editing ? (
+            <HeaderSegmented<ParcelForm['mode']>
+              className=""
+              value={mode}
+              onChange={(value) => setValue('mode', value)}
+              options={[
+                { value: 'single', label: t('reception.modeSingle'), testID: 'parcel-form-single' },
+                { value: 'bulk', label: t('reception.modeBulk'), testID: 'parcel-form-bulk' },
+              ]}
+            />
+          ) : null}
+        </ModuleHeader>
+      }
       scrollRef={scrollRef}
       footer={
         <Button
@@ -174,17 +189,6 @@ function ParcelFormBody({ parcel }: { parcel?: ParcelDto }) {
       }
     >
         {locked ? <Banner tone="warning">{t('reception.lockedEdit')}</Banner> : null}
-
-        {!editing ? (
-          <Segmented<ParcelForm['mode']>
-            value={mode}
-            onChange={(value) => setValue('mode', value)}
-            options={[
-              { value: 'single', label: t('reception.modeSingle'), testID: 'parcel-form-single' },
-              { value: 'bulk', label: t('reception.modeBulk'), testID: 'parcel-form-bulk' },
-            ]}
-          />
-        ) : null}
 
         <Card className="gap-3 p-4">
           {mode === 'single' ? (
@@ -391,6 +395,6 @@ function ParcelFormBody({ parcel }: { parcel?: ParcelDto }) {
         disabled={(minutes) => receivedKey === todayKey() && minutes > nowMinutes}
         onSelect={(minutes) => setReceivedAt(atMinutes(receivedKey, minutes))}
       />
-    </ScreenShell>
+    </ModuleScreen>
   );
 }

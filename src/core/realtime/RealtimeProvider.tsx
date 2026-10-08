@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 import type { ServiceId } from '@/core/api/ApiError';
 import { qk } from '@/core/query/keys';
 import { useSessionStore } from '@/core/session/sessionStore';
+import { kv, kvKeys } from '@/core/storage/kv';
 import { hrefForNotification, keysForNotification, keysForResource } from '@/features/notification/routing';
 import { toast } from '@/shared/ui/Toast';
 
@@ -13,7 +14,7 @@ import { ServiceHub, type HubHandlers } from './hub';
 
 /**
  * Keeps one SignalR connection per connected back-end while the app is in the foreground.
- * - ReceiveNotification: toast + bell badge refresh (+ the data the notification is about)
+ * - ReceiveNotification: toast (unless turned off in Profile) + bell badge refresh (+ the data the notification is about)
  * - PermissionsUpdated: reload menus / capabilities and profile
  * - ResourceUpdated: invalidate the matching query group (active screens refetch)
  */
@@ -28,7 +29,8 @@ export function RealtimeProvider() {
     const handlers: HubHandlers = {
       onNotification: (service, payload) => {
         invalidate([qk.notifications.list(service), qk.notifications.unread(service), ...keysForNotification(service)]);
-        if (payload.title || payload.content) {
+        const popups = kv.getBoolean(kvKeys.notificationPopups) !== false;
+        if (popups && (payload.title || payload.content)) {
           toast.notification(payload.title ?? '', payload.content ?? undefined, () =>
             router.push(hrefForNotification(service, payload.code, payload.bookingId)),
           );

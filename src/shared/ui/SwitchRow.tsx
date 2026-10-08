@@ -31,7 +31,7 @@ export function SwitchRow({ label, value, onChange, icon, hint, className, testI
         testID={testID}
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: colors.primary, false: colors.track }}
+        trackColor={{ true: colors.success, false: colors.track }}
         thumbColor="#FFFFFF"
         ios_backgroundColor={colors.track}
         accessibilityLabel={label}

@@ -350,27 +350,58 @@ export function approvalLevelCount(steps?: ApprovalStepDto[] | null) {
 
 export type ExtendOption = { minutes: number; taken: boolean };
 
-/** New end-time chips: same day, after the current end, within opening hours; taken slots struck out. */
-export function extendOptions(b: BookingDto, room: RoomDto | null | undefined, sameDayBookings: BookingDto[]): ExtendOption[] {
+/** Gaps of the quick extend chips, in minutes after the current end. */
+export const EXTEND_STEPS = [15, 30, 60];
+
+/**
+ * New end-time choices: same day, after the current end, within opening hours; taken slots struck
+ * out. `deltas` defaults to the chips plus 90'; "Khác" asks for every quarter hour.
+ */
+export function extendOptions(b: BookingDto, room: RoomDto | null | undefined, sameDayBookings: BookingDto[], deltas: number[] = [...EXTEND_STEPS, 90]): ExtendOption[] {
   const from = bookingFrom(b);
   const to = bookingTo(b);
   if (!from || !to) return [];
   const end = minutesOfDay(to);
   const close = parseTimeOfDay(room?.closedAt) ?? 23 * 60 + 45;
   const day = toDateKey(to);
-  return [15, 30, 60, 90]
+  return deltas
     .map((delta) => end + delta)
     .filter((m) => m <= close && m < 24 * 60)
     .map((minutes) => ({
       minutes,
-      taken: sameDayBookings.some(
-        (o) =>
-          !sameId(o.id, b.id) &&
-          sameId(o.roomId ?? o.room?.id, b.roomId ?? b.room?.id) &&
-          (o.status === BookingStatus.Approved || (room?.isDisableOverlappingTimes && o.status === BookingStatus.Waiting)) &&
-          overlapsSlot(o, day, end, minutes),
-      ),
+      taken: sameDayBookings.some((o) => blocksExtension(o, b, room) && overlapsSlot(o, day, end, minutes)),
     }));
+}
+
+/** Every quarter hour from the current end to closing time ("Khác"). */
+export function allExtendDeltas(b: BookingDto, room: RoomDto | null | undefined): number[] {
+  const to = bookingTo(b);
+  if (!to) return [];
+  const close = parseTimeOfDay(room?.closedAt) ?? 23 * 60 + 45;
+  const span = Math.min(close, 24 * 60 - 15) - minutesOfDay(to);
+  return Array.from({ length: Math.max(0, Math.floor(span / 15)) }, (_, i) => (i + 1) * 15);
+}
+
+function blocksExtension(o: BookingDto, b: BookingDto, room: RoomDto | null | undefined) {
+  return (
+    !sameId(o.id, b.id) &&
+    sameId(o.roomId ?? o.room?.id, b.roomId ?? b.room?.id) &&
+    (o.status === BookingStatus.Approved || (!!room?.isDisableOverlappingTimes && o.status === BookingStatus.Waiting))
+  );
+}
+
+/** Minute of day until which the room stays free after the meeting: next blocking booking or closing time. */
+export function freeUntil(b: BookingDto, room: RoomDto | null | undefined, sameDayBookings: BookingDto[]): number | null {
+  const to = bookingTo(b);
+  if (!to) return null;
+  const end = minutesOfDay(to);
+  const day = toDateKey(to);
+  const close = parseTimeOfDay(room?.closedAt) ?? 24 * 60;
+  const next = sameDayBookings
+    .filter((o) => blocksExtension(o, b, room) && toDateKey(bookingFrom(o) ?? new Date(0)) === day)
+    .map((o) => minutesOfDay(bookingFrom(o)!))
+    .filter((m) => m >= end);
+  return Math.min(close, ...next);
 }
 
 // ---- action matrix (CLAUDE.md §3.4) -------------------------------------------------------------

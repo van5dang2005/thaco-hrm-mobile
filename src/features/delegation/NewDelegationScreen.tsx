@@ -19,12 +19,12 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { DatePickerSheet } from '@/shared/ui/DatePickerSheet';
-import { HeaderBar } from '@/shared/ui/HeaderBar';
+import { HeaderSegmented } from '@/shared/ui/HeaderSegmented';
 import { Icon } from '@/shared/ui/Icon';
-import { ArrowRightIcon, CheckIcon } from '@/shared/ui/icons';
+import { ArrowRightIcon, CheckIcon, UserPlusIcon } from '@/shared/ui/icons';
 import { PersonRow } from '@/shared/ui/PersonRow';
-import { ScreenShell } from '@/shared/ui/ScreenShell';
-import { Segmented } from '@/shared/ui/Segmented';
+import { ModuleHeader } from '@/shared/ui/ModuleHeader';
+import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/StateViews';
 import { ParcelBadge } from '@/shared/ui/StatusBadge';
@@ -91,15 +91,12 @@ export function NewDelegationScreen() {
   const detailedBlocked = kind === 'detailed' && !!blocking;
 
   return (
-    <ScreenShell
-      header={<HeaderBar title={t('delegations.newTitle')} />}
-      footer={<Button testID="new-delegation-submit" className="flex-1" label={t('delegations.submit')} loading={submit.isPending} disabled={detailedBlocked} onPress={onSubmit} />}
-    >
-        <View className="gap-2">
-          <Text weight="medium" className="text-sub text-muted">
-            {t('delegations.type')}
-          </Text>
-          <Segmented<Kind>
+    <ModuleScreen
+      header={
+        <ModuleHeader icon={UserPlusIcon} title={t('delegations.newTitle')} bottom={24}>
+          <HeaderSegmented<Kind>
+            testID="new-delegation-kind"
+            className=""
             value={kind}
             onChange={(value) => {
               setKind(value);
@@ -110,8 +107,11 @@ export function NewDelegationScreen() {
               { value: 'detailed', label: t('delegations.typeDetailed'), testID: 'new-delegation-detailed' },
             ]}
           />
-          <Text className="text-meta leading-[17px] text-muted">{kind === 'default' ? t('delegations.defaultHint') : t('delegations.detailedHint')}</Text>
-        </View>
+        </ModuleHeader>
+      }
+      footer={<Button testID="new-delegation-submit" className="flex-1" label={t('delegations.submit')} loading={submit.isPending} disabled={detailedBlocked} onPress={onSubmit} />}
+    >
+        <Text className="px-1 text-meta leading-[17px] text-muted">{kind === 'default' ? t('delegations.defaultHint') : t('delegations.detailedHint')}</Text>
 
         <Card className="gap-2.5 p-4">
           <Text weight="semibold" className="text-body">
@@ -204,6 +204,6 @@ export function NewDelegationScreen() {
         }}
       />
       <DatePickerSheet visible={picker === 'end'} onClose={() => setPicker(null)} title={t('delegations.endDate')} value={endKey} minDate={addDays(startKey, 1)} onSelect={setEndKey} />
-    </ScreenShell>
+    </ModuleScreen>
   );
 }

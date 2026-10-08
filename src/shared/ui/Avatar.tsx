@@ -70,8 +70,8 @@ type StackProps = {
   max?: number;
 };
 
-/** Overlap of stacked avatars: about a quarter of the size, kept within 6–10pt. */
-export const stackOverlap = (size: number) => Math.min(10, Math.max(6, Math.round(size * 0.26)));
+/** Overlap of stacked avatars (v3: 6pt, a little more for large avatars). */
+export const stackOverlap = (size: number) => (size > 32 ? 8 : 6);
 
 /** Overlapping avatars (white 2pt ring) with a "+N" bubble. */
 export function AvatarStack({ people, size = 30, max = 3 }: StackProps) {

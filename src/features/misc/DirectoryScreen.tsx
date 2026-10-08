@@ -12,7 +12,7 @@ import { useDebounced } from '@/shared/hooks/useDebounced';
 import { Card } from '@/shared/ui/Card';
 import { HeaderBar } from '@/shared/ui/HeaderBar';
 import { Icon } from '@/shared/ui/Icon';
-import { EnvelopeSimpleIcon, MagnifyingGlassIcon, PhoneIcon, UsersIcon } from '@/shared/ui/icons';
+import { MailIcon, SearchIcon, PhoneIcon, UsersIcon, BookUserIcon } from '@/shared/ui/icons';
 import { PersonRow } from '@/shared/ui/PersonRow';
 import { ScreenShell, SHEET_PADDING } from '@/shared/ui/ScreenShell';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
@@ -61,12 +61,12 @@ export function DirectoryScreen() {
   }));
 
   return (
-    <ScreenShell header={<HeaderBar title={t('directory.title')} />} scroll={false}>
+    <ScreenShell header={<HeaderBar icon={BookUserIcon} title={t('directory.title')} />} scroll={false}>
       <View className="px-4 pb-1 pt-[18px]">
         <TextField
           testID="directory-search"
           filled
-          leftIcon={MagnifyingGlassIcon}
+          leftIcon={SearchIcon}
           value={search}
           onChangeText={setSearch}
           placeholder={t('directory.searchPlaceholder')}
@@ -101,7 +101,7 @@ export function DirectoryScreen() {
               trailing={
                 <View className="flex-row gap-2">
                   {item.phone ? <ContactButton icon={PhoneIcon} label={t('directory.call')} onPress={() => void Linking.openURL(`tel:${item.phone!.replace(/\s/g, '')}`)} /> : null}
-                  {item.email ? <ContactButton icon={EnvelopeSimpleIcon} label={t('directory.email')} onPress={() => void Linking.openURL(`mailto:${item.email}`)} /> : null}
+                  {item.email ? <ContactButton icon={MailIcon} label={t('directory.email')} onPress={() => void Linking.openURL(`mailto:${item.email}`)} /> : null}
                 </View>
               }
             />

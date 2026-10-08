@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { HeaderBar } from '@/shared/ui/HeaderBar';
-import { HourglassMediumIcon } from '@/shared/ui/icons';
+import { HourglassIcon } from '@/shared/ui/icons';
 import { ScreenShell } from '@/shared/ui/ScreenShell';
 import { EmptyState } from '@/shared/ui/StateViews';
 
@@ -14,7 +14,7 @@ export function ComingSoonScreen({ title }: { title?: string }) {
   return (
     <ScreenShell header={<HeaderBar title={moduleName} />}>
       <EmptyState
-        icon={HourglassMediumIcon}
+        icon={HourglassIcon}
         message={t('comingSoon.message', { module: moduleName })}
         actionLabel={t('comingSoon.back')}
         onAction={() => router.dismissTo('/')}

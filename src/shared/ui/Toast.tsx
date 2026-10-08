@@ -7,7 +7,7 @@ import { create } from 'zustand';
 import { useTheme } from '@/core/theme/ThemeProvider';
 
 import { Icon } from './Icon';
-import { type AppIcon, BellIcon, CheckCircleIcon, InfoIcon, WarningCircleIcon } from './icons';
+import { type AppIcon, BellIcon, CircleCheckIcon, InfoIcon, CircleAlertIcon } from './icons';
 import { Text } from './Text';
 
 type ToastTone = 'success' | 'error' | 'info' | 'notification';
@@ -46,8 +46,8 @@ export const toast = {
 };
 
 const toneIcon: Record<ToastTone, AppIcon> = {
-  success: CheckCircleIcon,
-  error: WarningCircleIcon,
+  success: CircleCheckIcon,
+  error: CircleAlertIcon,
   info: InfoIcon,
   notification: BellIcon,
 };

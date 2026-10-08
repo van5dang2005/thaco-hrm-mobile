@@ -33,8 +33,11 @@ appId: vn.com.thaco.hrm
     id: login-username
 - eraseText: 40
 - inputText: ${USERNAME}
+# The form slides up with the keyboard; tap the password field only once it has settled.
+- waitForAnimationToEnd
 - tapOn:
     id: login-password
+- waitForAnimationToEnd
 - inputText: ${PASSWORD}
 - pressKey: Enter
 # iOS may offer to save the password to the keychain; that sheet hides the app until dismissed.

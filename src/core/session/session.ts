@@ -52,6 +52,16 @@ export async function signIn(request: LoginRequest): Promise<SignInResult> {
   return { failed };
 }
 
+/**
+ * Checks domain credentials without touching the session (Profile → turn on Face ID): either
+ * back-end accepting them is enough. Throws the more telling error when both refuse.
+ */
+export async function verifyCredentials(request: LoginRequest): Promise<void> {
+  const results = await Promise.allSettled([loginTo(parcelApi, request), loginTo(roomApi, request)]);
+  if (results.some((r) => r.status === 'fulfilled' && !!r.value?.token)) return;
+  throw pickError(results.map((r) => (r.status === 'rejected' ? r.reason : new Error('EMPTY_TOKEN'))));
+}
+
 let signingOut = false;
 
 export async function signOut() {

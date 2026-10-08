@@ -4,7 +4,7 @@ import { greetingPeriod, msToNextPeriod, useGreeting } from '../useGreeting';
 
 let mockScheme: 'light' | 'dark' = 'light';
 jest.mock('@/core/theme/ThemeProvider', () => ({ useTheme: () => ({ scheme: mockScheme }) }));
-jest.mock('@/shared/ui/icons', () => ({ SunIcon: 'Sun', SunHorizonIcon: 'Sunset', MoonIcon: 'Moon' }));
+jest.mock('@/shared/ui/icons', () => ({ SunIcon: 'Sun', SunriseIcon: 'Sunset', MoonIcon: 'Moon' }));
 
 // Device-local times (the greeting follows the phone's clock, not Vietnam time).
 const local = (hour: number, minute = 0) => new Date(2026, 9, 5, hour, minute, 0);

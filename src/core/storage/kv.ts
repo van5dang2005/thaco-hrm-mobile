@@ -9,12 +9,15 @@ export const queryCacheStore = createMMKV({ id: 'thaco-hrm.query-cache' });
 export const kvKeys = {
   language: 'settings.language',
   colorScheme: 'settings.colorScheme',
-  uiFont: 'settings.uiFont',
+  /** Profile → "Thông báo": pop a toast for live notifications (the bell badge updates either way). */
+  notificationPopups: 'settings.notificationPopups',
   lastDomain: 'auth.lastDomain',
   lastUsername: 'auth.lastUsername',
+  /** "Ghi nhớ đăng nhập": prefill the login form with `rememberedUsername`. */
+  rememberLogin: 'auth.rememberLogin',
+  rememberedUsername: 'auth.rememberedUsername',
   biometricEnabled: 'auth.biometricEnabled',
   lastAreaId: 'rooms.lastAreaId',
-  drawerCollapsedGroups: 'home.drawerCollapsedGroups',
 } as const;
 
 export function readJSON<T>(key: string): T | undefined {

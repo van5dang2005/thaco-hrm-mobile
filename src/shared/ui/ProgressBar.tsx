@@ -12,13 +12,15 @@ type Props = {
   height?: number;
   /** White 20% track for bars on the blue header. */
   onHeader?: boolean;
+  /** Track color when it should follow the bar's tone (parcel deadlines); #EEF2F6 otherwise. */
+  track?: string;
   /** Round knob at the current position (parcel lifecycle). */
   knob?: boolean;
   testID?: string;
 };
 
-/** Thin progress bar, radius half its height, #EEF2F6 track. */
-export function ProgressBar({ value, color, height = 6, onHeader, knob, testID }: Props) {
+/** Thin progress bar, radius half its height. */
+export function ProgressBar({ value, color, height = 6, onHeader, track, knob, testID }: Props) {
   const { colors } = useTheme();
   const ratio = Math.min(1, Math.max(0, value));
   const radius = height / 2;
@@ -27,7 +29,7 @@ export function ProgressBar({ value, color, height = 6, onHeader, knob, testID }
       testID={testID}
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max: 100, now: Math.round(ratio * 100) }}
-      style={{ height, borderRadius: radius, backgroundColor: onHeader ? onBlue(0.2) : colors['line-2'] }}
+      style={{ height, borderRadius: radius, backgroundColor: onHeader ? onBlue(0.2) : (track ?? colors['line-2']) }}
     >
       <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${ratio * 100}%`, borderRadius: radius, backgroundColor: color }} />
       {knob ? (

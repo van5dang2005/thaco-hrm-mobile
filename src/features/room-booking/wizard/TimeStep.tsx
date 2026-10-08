@@ -1,10 +1,9 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { sameId } from '@/core/session/userTypes';
-import { useTheme } from '@/core/theme/ThemeProvider';
 import { addDays, atMinutes, formatKey, formatMinutes, minutesOfDay, parseTimeOfDay, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
 import { useNow } from '@/shared/hooks/useNow';
 import { cn } from '@/shared/lib/cn';
@@ -13,7 +12,7 @@ import { Button } from '@/shared/ui/Button';
 import { DatePickerSheet } from '@/shared/ui/DatePickerSheet';
 import { Icon } from '@/shared/ui/Icon';
 import { NumberStepper } from '@/shared/ui/NumberStepper';
-import { CaretLeftIcon, CaretRightIcon, RepeatIcon, UsersIcon } from '@/shared/ui/icons';
+import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, DoorOpenIcon, InfoIcon, RepeatIcon, UsersIcon } from '@/shared/ui/icons';
 import { Segmented } from '@/shared/ui/Segmented';
 import { SelectSheet } from '@/shared/ui/SelectSheet';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
@@ -22,7 +21,9 @@ import { ErrorState } from '@/shared/ui/StateViews';
 import { Text } from '@/shared/ui/Text';
 import { FieldBox } from '@/shared/ui/FieldBox';
 import { RoundIcon } from '@/shared/ui/RoundIcon';
-import { onBlue, ScreenShell } from '@/shared/ui/ScreenShell';
+import { Card } from '@/shared/ui/Card';
+import { HeaderIconButton } from '@/shared/ui/HeaderBar';
+import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 
 import { buildSlots, busyFromBlocks, nextRange, rangeFromMinutes, rangeMinutes, splitDuration, type SlotRange } from '../availability';
 import { draftSessions, useBookingDraft } from '../draftStore';
@@ -30,16 +31,16 @@ import { useCrossLevel, useRooms, useSchedule } from '../hooks';
 import { evaluateRoom, MAX_SESSIONS, roomDayBlocks, type Recurrence } from '../logic';
 import { WizardHeader } from '../ui/WizardHeader';
 import { SlotGrid } from '../ui/SlotGrid';
-import { useBlockReasonText } from './navigation';
+import { useBlockReasonText, useGoToStep } from './navigation';
 import { useRoomMeta } from './RoomStep';
 
 /** B2 (4b): pick a contiguous range of 30-minute slots, people and repetition. */
 export function TimeStep() {
   const { t } = useTranslation();
-  const { colors } = useTheme();
   const draft = useBookingDraft((s) => s.draft);
   const patch = useBookingDraft((s) => s.patch);
   const reasonText = useBlockReasonText();
+  const goToStep = useGoToStep();
   const roomMeta = useRoomMeta();
   const now = useNow();
   const today = todayKey(now);
@@ -111,64 +112,87 @@ export function TimeStep() {
         ? t('time.hours', { count: duration.hours })
         : t('time.minutes', { count: duration.minutes });
   const dayLabel = `${t(`time.weekday.${String(weekdayOf(draft.dateKey)) as '0'}`)}, ${formatKey(draft.dateKey)}`;
-  const fg = colors['header-name'];
   const recurrenceName = draft.recurrence === 'weekly' ? t('booking.recurrenceWeekly') : t('booking.recurrenceDaily');
 
   const header = (
-    <>
-      <WizardHeader testID="booking-time-header" title={t('booking.chooseTime')} step={2} />
-      <View className="gap-1 px-3 pt-1.5">
-        <Text weight="bold" numberOfLines={2} className="text-title" style={{ color: fg }}>
-          {room?.name ?? ' '}
-        </Text>
-        {room ? (
-          <Text numberOfLines={2} className="text-sub" style={{ color: colors['header-job'] }}>
-            {`${roomMeta(room)} · ${t('booking.opensAt', { open: formatMinutes(open), close: formatMinutes(close) })}`}
-          </Text>
-        ) : null}
-      </View>
-      <View className="mx-3 mt-4 h-11 flex-row items-center justify-between rounded-[14px] px-1.5" style={{ backgroundColor: onBlue(0.12) }}>
-        <DayArrow icon={CaretLeftIcon} label={t('rooms.previousDay')} disabled={draft.dateKey <= today} onPress={() => changeDay(addDays(draft.dateKey, -1))} />
-        <Pressable testID="booking-date" accessibilityRole="button" accessibilityLabel={dayLabel} onPress={() => setSheet('date')} className="h-11 flex-1 items-center justify-center">
-          <Text weight="semibold" numberOfLines={1} className="text-body" style={{ color: fg }}>
-            {dayLabel}
-          </Text>
-        </Pressable>
-        <DayArrow icon={CaretRightIcon} label={t('rooms.nextDay')} disabled={!!maxKey && draft.dateKey >= maxKey} onPress={() => changeDay(addDays(draft.dateKey, 1))} />
-      </View>
-    </>
+    <WizardHeader
+      testID="booking-time-header"
+      step={2}
+      right={<HeaderIconButton testID="booking-date" icon={CalendarIcon} label={t('booking.date')} onPress={() => setSheet('date')} />}
+    />
   );
 
   const footer = (
-    <View className="flex-1 gap-3">
-      {error ? (
-        <Banner tone="danger" testID="booking-time-error">
-          {error}
-        </Banner>
-      ) : null}
-      <View className="flex-row items-center gap-3">
-        <View className="flex-1 gap-0.5">
-          <Text mono weight="semibold" numberOfLines={1} className={cn(!range && 'text-muted')} style={{ fontSize: 17, lineHeight: 22 }}>
-            {range ? `${formatMinutes(draft.startMin)} – ${formatMinutes(draft.endMin)}` : '––:–– – ––:––'}
-          </Text>
-          <Text numberOfLines={1} className="text-meta text-muted">
-            {durationLabel}
-          </Text>
-        </View>
-        <Button testID="booking-time-continue" label={t('common.next')} disabled={!range} onPress={next} className="px-6" />
+    <>
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text mono weight="bold" numberOfLines={1} className={cn(!range && 'text-muted')} style={{ fontSize: 17, lineHeight: 22 }}>
+          {range ? `${formatMinutes(draft.startMin)} - ${formatMinutes(draft.endMin)}` : '––:–– - ––:––'}
+        </Text>
+        <Text numberOfLines={1} className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
+          {durationLabel}
+        </Text>
       </View>
-    </View>
+      <Button
+        testID="booking-time-continue"
+        label={t('common.next')}
+        disabled={!range}
+        onPress={next}
+        className="px-6"
+        trailing={<Icon icon={ChevronRightIcon} size={16} weight="bold" color="on-primary" />}
+      />
+    </>
   );
 
   return (
-    <ScreenShell header={header} footer={footer} slide sheetBg="surface" scroll={false}>
-      <ScrollView contentContainerClassName="gap-3.5 px-4 pb-6 pt-5">
+    <ModuleScreen
+      header={header}
+      footer={footer}
+      footerNote={
+        error ? (
+          <Banner tone="danger" testID="booking-time-error">
+            {error}
+          </Banner>
+        ) : null
+      }
+    >
+      <Card>
+        <View className="flex-row items-center gap-3 p-3.5">
+          <RoundIcon icon={DoorOpenIcon} size={40} square />
+          <View className="min-w-0 flex-1">
+            <Text weight="bold" numberOfLines={1} style={{ fontSize: 15.5, lineHeight: 20 }}>
+              {room?.name ?? ' '}
+            </Text>
+            {room ? (
+              <Text numberOfLines={1} className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
+                {`${roomMeta(room)} · ${t('booking.opensAt', { open: formatMinutes(open), close: formatMinutes(close) })}`}
+              </Text>
+            ) : null}
+          </View>
+          <Pressable testID="booking-change-room" accessibilityRole="button" accessibilityLabel={t('booking.backToRoom')} onPress={() => goToStep('index')} hitSlop={10} className="active:opacity-60">
+            <Text weight="bold" className="text-primary" style={{ fontSize: 13.5, lineHeight: 18 }}>
+              {t('common.change')}
+            </Text>
+          </Pressable>
+        </View>
+        <View className="h-11 flex-row items-center border-t border-line-2 px-1.5">
+          <DayArrow icon={ChevronLeftIcon} label={t('rooms.previousDay')} disabled={draft.dateKey <= today} onPress={() => changeDay(addDays(draft.dateKey, -1))} />
+          <Pressable testID="booking-date-label" accessibilityRole="button" accessibilityLabel={dayLabel} onPress={() => setSheet('date')} className="h-11 flex-1 flex-row items-center justify-center gap-1.5 active:opacity-70">
+            <Icon icon={CalendarIcon} size={15} color="primary" />
+            <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 14, lineHeight: 19 }}>
+              {dayLabel}
+            </Text>
+          </Pressable>
+          <DayArrow icon={ChevronRightIcon} label={t('rooms.nextDay')} disabled={!!maxKey && draft.dateKey >= maxKey} onPress={() => changeDay(addDays(draft.dateKey, 1))} />
+        </View>
+      </Card>
+
+      <Card className="gap-3.5 p-3.5">
         <View className="flex-row items-center justify-between gap-2">
-          <Text weight="semibold" className="text-card" style={{ fontSize: 16 }}>
+          <Text weight="bold" accessibilityRole="header" style={{ fontSize: 15, lineHeight: 20 }}>
             {t('booking.slotsTitle')}
           </Text>
           <View className="flex-row gap-2.5">
-            <Legend label={t('booking.legendFree')} className="border border-input-border" />
+            <Legend label={t('booking.legendFree')} className="border border-input-border bg-elevated" />
             <Legend label={t('booking.legendTaken')} className="bg-off-tint" />
             <Legend label={t('booking.legendSelected')} className="bg-primary" />
           </View>
@@ -188,33 +212,39 @@ export function TimeStep() {
           <Text className="py-6 text-center text-body text-muted">{t('booking.noSlots')}</Text>
         )}
 
-        <Text className="text-meta text-muted">{t('booking.slotHint')}</Text>
-        {pendingInRange ? <Banner tone="warning">{t('booking.pendingSlotWarning')}</Banner> : null}
-
-        <View className="rounded-[18px] border border-line">
-          <View className="min-h-[52px] flex-row items-center gap-3 px-3.5 py-2">
-            <RoundIcon icon={UsersIcon} size={32} />
-            <View className="flex-1">
-              <Text className="text-body">{t('booking.people')}</Text>
-              {overCapacity ? <Text className="text-meta text-warning-text">{t('booking.seatsExceeded', { seats: room?.numberOfSeats ?? 0 })}</Text> : null}
-            </View>
-            <NumberStepper testID="booking-people" value={draft.people} onChange={(people) => patch({ people })} min={1} max={500} accessibilityLabel={t('booking.people')} warn={overCapacity} />
-          </View>
-          {!editingSingle ? (
-            <>
-              <View className="mr-0 h-px bg-line-2" style={{ marginLeft: 58 }} />
-              <Pressable testID="booking-repeat" accessibilityRole="button" onPress={() => setSheet('repeat')} className="min-h-[52px] flex-row items-center gap-3 px-3.5 py-2 active:opacity-70">
-                <RoundIcon icon={RepeatIcon} size={32} />
-                <Text className="flex-1 text-body">{t('booking.repeat')}</Text>
-                <Text numberOfLines={1} className="flex-shrink text-sub text-muted">
-                  {draft.recurrence === 'none' ? t('booking.repeatNone') : t('booking.repeatSummary', { recurrence: recurrenceName, count: sessions.length })}
-                </Text>
-                <Icon icon={CaretRightIcon} size={16} color="subtle" />
-              </Pressable>
-            </>
-          ) : null}
+        <View className="flex-row items-center gap-1.5">
+          <Icon icon={InfoIcon} size={13} color="muted" />
+          <Text className="flex-1 text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
+            {t('booking.slotHint')}
+          </Text>
         </View>
-      </ScrollView>
+        {pendingInRange ? <Banner tone="warning">{t('booking.pendingSlotWarning')}</Banner> : null}
+      </Card>
+
+      <Card>
+        <View className="min-h-[56px] flex-row items-center gap-3 px-3.5 py-2">
+          <RoundIcon icon={UsersIcon} size={32} square />
+          <View className="flex-1">
+            <Text weight="medium" style={{ fontSize: 14.5, lineHeight: 19 }}>
+              {t('booking.people')}
+            </Text>
+            {overCapacity ? <Text className="text-meta text-warning-text">{t('booking.seatsExceeded', { seats: room?.numberOfSeats ?? 0 })}</Text> : null}
+          </View>
+          <NumberStepper testID="booking-people" value={draft.people} onChange={(people) => patch({ people })} min={1} max={500} accessibilityLabel={t('booking.people')} warn={overCapacity} />
+        </View>
+        {!editingSingle ? (
+          <Pressable testID="booking-repeat" accessibilityRole="button" onPress={() => setSheet('repeat')} className="min-h-[56px] flex-row items-center gap-3 border-t border-line-2 px-3.5 py-2 active:opacity-70">
+            <RoundIcon icon={RepeatIcon} size={32} square />
+            <Text weight="medium" className="flex-1" style={{ fontSize: 14.5, lineHeight: 19 }}>
+              {t('booking.repeat')}
+            </Text>
+            <Text weight="bold" numberOfLines={1} className={cn('flex-shrink', draft.recurrence === 'none' ? 'text-muted' : 'text-primary')} style={{ fontSize: 13.5, lineHeight: 18 }}>
+              {draft.recurrence === 'none' ? t('booking.repeatNone') : t('booking.repeatSummary', { recurrence: recurrenceName, count: sessions.length })}
+            </Text>
+            <Icon icon={ChevronRightIcon} size={16} color={draft.recurrence === 'none' ? 'subtle' : 'primary'} />
+          </Pressable>
+        ) : null}
+      </Card>
 
       <DatePickerSheet
         visible={sheet === 'date'}
@@ -226,7 +256,7 @@ export function TimeStep() {
         onSelect={changeDay}
       />
       <RepeatSheet visible={sheet === 'repeat'} onClose={() => setSheet(null)} />
-    </ScreenShell>
+    </ModuleScreen>
   );
 }
 
@@ -241,8 +271,7 @@ function Legend({ label, className }: { label: string; className: string }) {
   );
 }
 
-function DayArrow({ icon, label, disabled, onPress }: { icon: typeof CaretLeftIcon; label: string; disabled: boolean; onPress: () => void }) {
-  const { colors } = useTheme();
+function DayArrow({ icon, label, disabled, onPress }: { icon: typeof ChevronLeftIcon; label: string; disabled: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -253,7 +282,7 @@ function DayArrow({ icon, label, disabled, onPress }: { icon: typeof CaretLeftIc
       className="h-11 w-11 items-center justify-center active:opacity-60"
       style={{ opacity: disabled ? 0.35 : 1 }}
     >
-      <Icon icon={icon} size={18} rawColor={colors['header-name']} />
+      <Icon icon={icon} size={18} color="ink-2" />
     </Pressable>
   );
 }

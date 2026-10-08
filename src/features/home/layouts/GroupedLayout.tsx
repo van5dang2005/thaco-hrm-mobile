@@ -1,63 +1,44 @@
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
-import { Icon } from '@/shared/ui/Icon';
+import { Card } from '@/shared/ui/Card';
 import { Text } from '@/shared/ui/Text';
 
 import { groupModules } from '../moduleFilter';
-import { groupOrder, type HomeModule } from '../modules';
-import { useModuleLabel } from '../useModules';
-import { chunk, type LayoutProps, RowPadding, TileMarker, useGroupTone, useTileA11yLabel } from './shared';
+import { groupOrder, type ModuleGroup } from '../modules';
+import { type LayoutProps, ModuleGrid, useGroupTone } from './shared';
 
-const COLUMNS = 4;
-
-/** "Theo nhóm" (2f): uppercase group titles, 4 columns, rounded squares tinted per group. */
+/** "Theo nhóm" (2f): one white card per group (Phòng họp, Bưu phẩm, Nhân sự), a 4×14 colored mark before the title, 4 columns. */
 export function GroupedLayout({ modules, signals, onOpen }: LayoutProps) {
   const { t } = useTranslation();
-
   return (
-    <View style={{ paddingTop: 12, paddingHorizontal: 16, paddingBottom: 16, rowGap: 18 }}>
-      {groupModules(modules, groupOrder).map(({ group, modules: items }) => (
-        <View key={group} style={{ rowGap: 10 }}>
-          <Text weight="semibold" accessibilityRole="header" className="px-1 text-meta text-muted" style={{ letterSpacing: 0.72, textTransform: 'uppercase' }}>
-            {t(`home.groups.${group}`)}
-          </Text>
-          <View style={{ rowGap: 12 }}>
-            {chunk(items, COLUMNS).map((row, index) => (
-              <View key={index} className="flex-row" style={{ columnGap: 6 }}>
-                {row.map((module) => (
-                  <GroupedTile key={module.id} module={module} count={signals[module.id]?.badge?.data} onOpen={onOpen} />
-                ))}
-                <RowPadding count={COLUMNS - row.length} />
-              </View>
-            ))}
-          </View>
-        </View>
-      ))}
+    <View className="gap-3">
+      {groupModules(modules, groupOrder).map(({ group, modules: items }) => {
+        const todo = items.reduce((sum, m) => sum + (signals[m.id]?.badge?.data ?? 0), 0);
+        return (
+          <Card key={group} testID={`home-group-${group}`} className="gap-3.5 overflow-visible px-2 pb-4 pt-3.5">
+            <GroupTitle group={group} label={t(`home.groups.${group}`)} note={todo ? t('home.groupTodo', { count: todo }) : undefined} />
+            <ModuleGrid modules={items} signals={signals} onOpen={onOpen} />
+          </Card>
+        );
+      })}
     </View>
   );
 }
 
-function GroupedTile({ module, count, onOpen }: { module: HomeModule; count?: number; onOpen: LayoutProps['onOpen'] }) {
-  const tone = useGroupTone(module.group);
-  const label = useModuleLabel();
-  const a11y = useTileA11yLabel();
+function GroupTitle({ group, label, note }: { group: ModuleGroup; label: string; note?: string }) {
+  const tone = useGroupTone(group);
   return (
-    <Pressable
-      testID={`home-module-${module.id}`}
-      accessibilityRole="button"
-      accessibilityLabel={a11y(module, label(module), count)}
-      onPress={() => onOpen(module)}
-      className="min-h-[44px] flex-1 items-center active:opacity-70"
-      style={{ rowGap: 7 }}
-    >
-      <View className="h-[52px] w-[52px] items-center justify-center rounded-[16px]" style={{ backgroundColor: tone.box }}>
-        <Icon icon={module.icon} size={24} rawColor={tone.icon} />
-        <TileMarker module={module} count={count} className="-right-1 -top-1" />
-      </View>
-      <Text weight="medium" numberOfLines={2} className="text-center text-meta text-ink">
-        {label(module, true)}
+    <View className="flex-row items-center gap-2 px-2">
+      <View className="h-3.5 w-1 rounded-full" style={{ backgroundColor: tone.bar }} />
+      <Text weight="bold" accessibilityRole="header" numberOfLines={1} className="flex-1 text-ink" style={{ fontSize: 14.5, lineHeight: 19 }}>
+        {label}
       </Text>
-    </Pressable>
+      {note ? (
+        <Text numberOfLines={1} className="text-muted" style={{ fontSize: 11.5, lineHeight: 15 }}>
+          {note}
+        </Text>
+      ) : null}
+    </View>
   );
 }

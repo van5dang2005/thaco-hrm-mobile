@@ -85,9 +85,9 @@ Không có Xcode thì build trên cloud bằng EAS Build (`npx eas-cli@latest bu
 
 ### Phông chữ và icon
 
-- Phông mặc định là **Be Vietnam Pro** (theo thiết kế). Người dùng đổi được trong *Cá nhân → Cài đặt → Phông chữ* (Be Vietnam Pro, Plus Jakarta Sans, Inter, phông hệ thống). Danh sách nằm ở `src/core/theme/fonts.ts`, lựa chọn lưu trong MMKV.
+- Toàn bộ giao diện dùng **Be Vietnam Pro** (theo thiết kế), cố định, không cho người dùng đổi. Khai báo ở `src/core/theme/fonts.ts`.
 - Mã, MSNV, giờ, số đếm luôn dùng **JetBrains Mono** (`<Text mono>`).
-- Icon là **Phosphor**. Chỉ import từ `src/shared/ui/icons.ts` (mỗi icon một file), không import từ gốc `phosphor-react-native`, vì Metro không tree-shake và sẽ nhúng cả ~1500 icon. Ở gốc `@expo-google-fonts/*` cũng vậy: import theo từng độ đậm (`@expo-google-fonts/inter/400Regular`).
+- Icon là **lucide** (`lucide-react-native`). Chỉ import từ `src/shared/ui/icons.ts` (mỗi icon một file `lucide-react-native/icons/<tên>`), không import từ gốc `lucide-react-native`, vì Metro không tree-shake và sẽ nhúng cả ~1900 icon. Ở gốc `@expo-google-fonts/*` cũng vậy: import theo từng độ đậm (`@expo-google-fonts/be-vietnam-pro/400Regular`).
 
 ## Kiểm tra
 

@@ -6,9 +6,10 @@ import { useCapabilities } from '@/core/session/capabilities';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { useParcelMe } from '@/core/session/useMe';
 import { sameId } from '@/core/session/userTypes';
-import { addDays, atMinutes, minutesOfDay, parseTimeOfDay, todayKey } from '@/core/time/vn';
+import { addDays, atMinutes, formatKey, minutesOfDay, parseTimeOfDay, todayKey, type DateKey } from '@/core/time/vn';
 import { useApprovalStats } from '@/features/approval/hooks';
 import { parcelsApi } from '@/features/parcel/api';
+import { parcelDeadline } from '@/features/parcel/logic';
 import { useMyDelegations, useMyParcelStats, useReceptionStats } from '@/features/parcel/hooks';
 import { DelegationStatus, ParcelStatus } from '@/features/parcel/types';
 import { bookingsApi } from '@/features/room-booking/api';
@@ -79,19 +80,19 @@ export function useMeetingsTodaySummary(): Signal<string> {
   };
 }
 
+export type FreeRooms = { free: number; total: number; /** One entry per room of the area, in room order: true when free now. */ rooms: boolean[] };
+
 /** Rooms of my default area that are open and not taken right now. */
-export function useFreeRoomsSummary(): Signal<string> {
-  const { t } = useTranslation();
-  const enabled = useCardsVisible();
+export function useFreeRooms(enabled: boolean): Signal<FreeRooms> {
   const areaId = useDefaultAreaId();
   const rooms = useRooms(enabled ? areaId : undefined);
   const schedule = useSchedule({ ...todayWindow(), areaId }, enabled);
-  if (!enabled || !areaId) return { data: t('home.summary.bookRoom'), isLoading: false };
+  if (!enabled || !areaId) return { data: undefined, isLoading: false };
   if (!rooms.data || !schedule.data) return { data: undefined, isLoading: rooms.isLoading || schedule.isLoading };
 
   const now = new Date();
   const nowMin = minutesOfDay(now);
-  const free = rooms.data.filter((room) => {
+  const free = rooms.data.map((room) => {
     const open = parseTimeOfDay(room.openedAt) ?? 0;
     const close = parseTimeOfDay(room.closedAt) ?? 24 * 60;
     if (nowMin < open || nowMin >= close) return false;
@@ -103,8 +104,15 @@ export function useFreeRoomsSummary(): Signal<string> {
       const to = bookingTo(b)?.getTime() ?? 0;
       return blocking && from <= now.getTime() && now.getTime() < to;
     });
-  }).length;
-  return { data: free ? t('home.summary.freeRooms', { count: free }) : t('home.summary.noFreeRooms'), isLoading: false };
+  });
+  return { data: { free: free.filter(Boolean).length, total: free.length, rooms: free }, isLoading: false };
+}
+
+export function useFreeRoomsSummary(): Signal<string> {
+  const { t } = useTranslation();
+  const rooms = useFreeRooms(useCardsVisible());
+  if (!rooms.data) return { data: rooms.isLoading ? undefined : t('home.summary.bookRoom'), isLoading: rooms.isLoading };
+  return { data: rooms.data.free ? t('home.summary.freeRooms', { count: rooms.data.free }) : t('home.summary.noFreeRooms'), isLoading: false };
 }
 
 // ── Approvals ───────────────────────────────────────────────────────────────
@@ -125,30 +133,41 @@ export function usePendingApprovalsSummary(): Signal<string> {
 
 // ── Parcels ─────────────────────────────────────────────────────────────────
 
+/** Parcels I still have to collect: waiting (incl. due) and overdue, as on the "Cần xử lý" tile. */
 export function useWaitingParcels(): Signal<number> {
   const stats = useMyParcelStats();
-  return { data: stats.data?.waiting, isLoading: stats.isLoading };
+  return { data: stats.data ? stats.data.waiting + stats.data.overdue : undefined, isLoading: stats.isLoading };
+}
+
+/** My parcels in the Due state (day 6), for "N đến hạn dd/MM". */
+export function useDueParcels(enabled = true) {
+  const connected = useSessionStore((s) => s.connected.parcel);
+  return useQuery({
+    queryKey: qk.parcels.my({ statuses: [ParcelStatus.Due], scope: 'home-due' }),
+    queryFn: () => parcelsApi.my({ pageNumber: 1, pageSize: 50, statuses: [ParcelStatus.Due] }),
+    enabled: connected && enabled,
+    select: (page) => {
+      // Only my own parcels count here; ones I collect for someone else are theirs to worry about.
+      const mine = page.items.filter((p) => !p.matchReason);
+      const due = mine.map((p) => parcelDeadline(p)?.dueKey).filter((key): key is DateKey => !!key).sort();
+      return { count: mine.length, firstDueKey: due[0] ?? null };
+    },
+  });
 }
 
 /** "2 chờ · 1 quá hạn" or "2 chờ · 1 đến hạn". `waiting` already includes the Due ones. */
 export function useParcelSummary(): Signal<string> {
   const { t } = useTranslation();
-  const connected = useSessionStore((s) => s.connected.parcel);
   const enabled = useCardsVisible();
   const stats = useMyParcelStats();
-  const due = useQuery({
-    queryKey: qk.parcels.my({ statuses: [ParcelStatus.Due], countOnly: true }),
-    queryFn: () => parcelsApi.my({ pageNumber: 1, pageSize: 1, statuses: [ParcelStatus.Due] }),
-    enabled: connected && enabled,
-    select: (page) => page.totalCount,
-  });
+  const due = useDueParcels(enabled);
   const s = stats.data;
   if (!s) return { data: undefined, isLoading: stats.isLoading };
   if (!s.waiting && !s.overdue) return { data: t('home.summary.parcelsNone'), isLoading: false };
   // Two parts at most so the line fits a half-width card; overdue outranks due.
   const parts = [
     s.waiting ? t('home.summary.parcelsWaiting', { count: s.waiting }) : null,
-    s.overdue ? t('home.summary.parcelsOverdue', { count: s.overdue }) : due.data ? t('home.summary.parcelsDue', { count: due.data }) : null,
+    s.overdue ? t('home.summary.parcelsOverdue', { count: s.overdue }) : due.data?.count ? t('home.summary.parcelsDue', { count: due.data.count }) : null,
   ];
   return { data: parts.filter(Boolean).join(' · '), isLoading: false };
 }
@@ -188,5 +207,46 @@ export function useReceptionSummary(): Signal<string> {
   return {
     data: waiting === undefined ? undefined : waiting ? t('home.summary.receptionWaiting', { count: waiting }) : t('home.summary.receptionNone'),
     isLoading: stats.isLoading,
+  };
+}
+
+// ── "Cần xử lý" ─────────────────────────────────────────────────────────────
+
+export type TodoKind = 'approvals' | 'parcels' | 'delegations';
+
+/** The module behind each to-do tile; a tile shows only when its module is visible to the user. */
+export const todoModuleIds: Record<TodoKind, string> = { approvals: 'approve-rooms', parcels: 'parcels', delegations: 'delegations' };
+
+export type TodoItem = { kind: TodoKind; count?: number; sub?: string; isLoading: boolean };
+
+/** Counts and second lines of the to-do tiles (2c / 2g). Parcels count the ones waiting for me (incl. due) plus overdue. */
+export function useTodoItems(): Record<TodoKind, TodoItem> {
+  const { t } = useTranslation();
+  const approvals = usePendingApprovals();
+  const stats = useMyParcelStats();
+  const due = useDueParcels();
+  const delegations = useDelegationsAwaitingMe();
+
+  const s = stats.data;
+  const parcelCount = s ? s.waiting + s.overdue : undefined;
+  const parcelSub = !s
+    ? undefined
+    : s.overdue
+      ? t('home.todo.parcelsOverdue', { count: s.overdue })
+      : due.data?.count && due.data.firstDueKey
+        ? t('home.todo.parcelsDue', { count: due.data.count, date: formatKey(due.data.firstDueKey, false) })
+        : s.waiting
+          ? t('home.todo.parcelsWaiting')
+          : t('home.todo.parcelsNone');
+
+  return {
+    approvals: { kind: 'approvals', count: approvals.data, sub: t('home.todo.approvalsSub'), isLoading: approvals.isLoading },
+    parcels: { kind: 'parcels', count: parcelCount, sub: parcelSub, isLoading: stats.isLoading },
+    delegations: {
+      kind: 'delegations',
+      count: delegations.data,
+      sub: delegations.data ? t('home.todo.delegationsSub') : t('home.todo.delegationsNone'),
+      isLoading: delegations.isLoading,
+    },
   };
 }

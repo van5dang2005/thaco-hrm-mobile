@@ -1,4 +1,4 @@
-import { addDays, parseDateKey, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
+import { addDays, parseDateKey, parseServerDate, todayKey, toDateKey, weekdayOf, type DateKey } from '@/core/time/vn';
 
 /** "Hôm nay · T2 05/10", "Ngày mai · T3 06/10", otherwise "T4 07/10". `t` resolves the i18n keys. */
 export function dayGroupTitle(key: DateKey, t: (key: string) => string, today: DateKey = todayKey()): string {
@@ -19,4 +19,20 @@ export function groupByDay<T>(items: T[], keyOf: (item: T) => DateKey): { key: D
     else groups.push({ key, data: [item] });
   });
   return groups;
+}
+
+type Timed = { from?: string | null; to?: string | null };
+
+/** my-approvals aggregates a series into one row: `from` is the first session and `to` the last one. */
+export function isSeries(b?: Timed | null) {
+  const from = parseServerDate(b?.from);
+  const to = parseServerDate(b?.to);
+  return !!from && !!to && toDateKey(from) !== toDateKey(to);
+}
+
+/** Minutes until `from` when it starts within `withinMinutes` from now ("Còn 5 giờ"), otherwise null. */
+export function startsWithin(from: Date | null | undefined, now: Date, withinMinutes: number): number | null {
+  if (!from) return null;
+  const minutes = Math.round((from.getTime() - now.getTime()) / 60_000);
+  return minutes > 0 && minutes <= withinMinutes ? minutes : null;
 }

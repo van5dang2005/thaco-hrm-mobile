@@ -1,14 +1,13 @@
 import { forwardRef, useState, type ReactNode } from 'react';
 import { Platform, Pressable, TextInput, View, type TextInputProps } from 'react-native';
 
-import { MAX_FONT_SCALE } from '@/core/theme/fonts';
-import { useFontStyle } from '@/core/theme/fontStore';
+import { MAX_FONT_SCALE, useFontStyle } from '@/core/theme/fonts';
 import type { ColorToken } from '@/core/theme/palette';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { cn } from '@/shared/lib/cn';
 
 import { Icon } from './Icon';
-import { type AppIcon, CaretDownIcon } from './icons';
+import { type AppIcon, ChevronDownIcon } from './icons';
 import { Text } from './Text';
 
 type BaseProps = {
@@ -98,7 +97,7 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
       >
         {props.value || props.placeholder || ''}
       </Text>
-      {right ?? <Icon icon={CaretDownIcon} size={16} color="subtle" />}
+      {right ?? <Icon icon={ChevronDownIcon} size={16} color="subtle" />}
     </Pressable>
   ) : (
     <>
@@ -137,7 +136,11 @@ export const TextField = forwardRef<TextInput, TextFieldProps>(function TextFiel
   return (
     <View className={cn('gap-1.5', containerClassName)}>
       {label && !android ? (
-        <Text weight="medium" className={filled ? 'text-muted' : 'text-sub text-ink-2'} style={filled ? { fontSize: 13, lineHeight: 17 } : undefined}>
+        <Text
+          weight={filled ? 'semibold' : 'medium'}
+          className={filled ? (focused ? 'text-primary' : 'text-ink-2') : 'text-sub text-ink-2'}
+          style={filled ? { fontSize: 13, lineHeight: 17 } : undefined}
+        >
           {label}
         </Text>
       ) : null}

@@ -6,7 +6,7 @@ import { addDays, parseDateKey, todayKey, type DateKey } from '@/core/time/vn';
 import { cn } from '@/shared/lib/cn';
 
 import { Icon } from './Icon';
-import { CaretLeftIcon, CaretRightIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon } from './icons';
 import { BottomSheet } from './BottomSheet';
 import { Text } from './Text';
 
@@ -62,13 +62,13 @@ export function DatePickerSheet({ visible, onClose, title, value, onSelect, minD
     <BottomSheet visible={visible} onClose={onClose} title={title} testID={testID}>
       <View className="flex-row items-center justify-between">
         <Pressable accessibilityRole="button" accessibilityLabel="previous month" onPress={() => shift(-1)} hitSlop={8} className="h-9 w-9 items-center justify-center rounded-[10px] border border-line">
-          <Icon icon={CaretLeftIcon} size={16} />
+          <Icon icon={ChevronLeftIcon} size={16} />
         </Pressable>
         <Text weight="semibold" className="text-card">
           {t('time.month', { month: cursor.month, year: cursor.year })}
         </Text>
         <Pressable accessibilityRole="button" accessibilityLabel="next month" onPress={() => shift(1)} hitSlop={8} className="h-9 w-9 items-center justify-center rounded-[10px] border border-line">
-          <Icon icon={CaretRightIcon} size={16} />
+          <Icon icon={ChevronRightIcon} size={16} />
         </Pressable>
       </View>
       <View>

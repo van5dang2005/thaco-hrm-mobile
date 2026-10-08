@@ -67,6 +67,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-sharing',
     ['expo-image-picker', { cameraPermission, photosPermission }],
     ['expo-local-authentication', { faceIDPermission: faceIdPermission }],
+    'expo-notifications',
   ],
   experiments: {
     typedRoutes: true,

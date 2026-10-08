@@ -4,12 +4,11 @@ import { Pressable, View } from 'react-native';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatMinutes, formatTime } from '@/core/time/vn';
 import { useNow } from '@/shared/hooks/useNow';
-import { cn } from '@/shared/lib/cn';
 import { Card } from '@/shared/ui/Card';
-import { HeaderPanel } from '@/shared/ui/HeaderPanel';
+import { Icon } from '@/shared/ui/Icon';
+import { CheckIcon, DoorOpenIcon, TriangleAlertIcon, UsersIcon } from '@/shared/ui/icons';
 import { ProgressBar } from '@/shared/ui/ProgressBar';
-import { useHeaderColors } from '@/shared/ui/ScreenShell';
-import { SectionTitle } from '@/shared/ui/SectionTitle';
+import { onBlue, useHeaderColors } from '@/shared/ui/ScreenShell';
 import { Text } from '@/shared/ui/Text';
 
 import { bookingFrom, bookingTo, type ExtendOption } from '../logic';
@@ -28,77 +27,139 @@ export function countdown(booking: BookingDto, now: Date) {
   return { phase: upcoming ? ('upcoming' as const) : live ? ('live' as const) : ('ended' as const), minutes, progress, from, to };
 }
 
-/** "Còn lại 25 phút" panel with a white progress bar, on the blue header of 6c. */
-export function CountdownPanel({ booking }: { booking: BookingDto }) {
+/**
+ * Blue header of a meeting in progress (6c): "● Đang diễn ra", title, the time range in large mono
+ * with "còn N phút", a green progress bar, then room and people.
+ */
+export function LiveHeader({ booking, title, roomLine, people }: { booking: BookingDto; title: string; roomLine: string; people: string }) {
   const { t } = useTranslation();
-  const { fg, sub } = useHeaderColors();
+  const { colors } = useTheme();
+  const { fg, text2 } = useHeaderColors();
   const now = useNow(15_000);
   const c = countdown(booking, now);
   if (!c) return null;
-  const label = c.phase === 'upcoming' ? t('meeting.startsIn') : c.phase === 'live' ? t('meeting.remaining') : t('meeting.endedAgo');
-  const value = c.minutes >= 60 ? t('meeting.hoursMinutes', { hours: Math.floor(c.minutes / 60), minutes: c.minutes % 60 }) : t('meeting.minutes', { count: c.minutes });
+  const green = colors['header-dot-live'];
+  const phaseLabel = c.phase === 'live' ? t('status.bookingPhase.live') : c.phase === 'upcoming' ? t('meeting.startsIn') : t('meeting.endedAgo');
+  const left = c.phase === 'live' ? t('meeting.leftMinutes', { count: c.minutes }) : c.phase === 'upcoming' ? t('meeting.minutes', { count: c.minutes }) : '';
   return (
-    <HeaderPanel testID="live-meeting-panel" className="gap-3 rounded-[20px] p-4">
-      <View className="flex-row items-end justify-between gap-3">
-        <View className="min-w-0 flex-1 gap-0.5">
-          <Text style={{ fontSize: 12, lineHeight: 16, color: sub }}>{label}</Text>
-          <Text mono weight="semibold" numberOfLines={1} maxFontSizeMultiplier={1.1} style={{ fontSize: 32, lineHeight: 38, color: fg }}>
-            {value}
-          </Text>
-        </View>
-        <Text mono weight="medium" numberOfLines={1} maxFontSizeMultiplier={1.1} style={{ fontSize: 13, lineHeight: 17, color: sub }}>
-          {`${formatTime(c.from)} – ${formatTime(c.to)}`}
+    <View testID="live-meeting-panel" className="gap-2.5">
+      <View className="h-6 flex-row items-center gap-1.5 self-start rounded-full px-2.5" style={{ backgroundColor: onBlue(0.14) }}>
+        <View className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: green }} />
+        <Text weight="bold" style={{ fontSize: 11.5, lineHeight: 15, color: fg }}>
+          {phaseLabel}
         </Text>
       </View>
-      <ProgressBar value={c.progress} color="#FFFFFF" height={8} onHeader />
-    </HeaderPanel>
+      <Text weight="bold" numberOfLines={2} accessibilityRole="header" style={{ fontSize: 22, lineHeight: 28, letterSpacing: -0.3, color: fg }}>
+        {title}
+      </Text>
+      <View className="flex-row items-end justify-between gap-3">
+        <Text mono weight="bold" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1} style={{ fontSize: 30, lineHeight: 36, color: fg }}>
+          {`${formatTime(c.from)} - ${formatTime(c.to)}`}
+        </Text>
+        {left ? (
+          <Text mono weight="semibold" numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 17, color: green, paddingBottom: 4 }}>
+            {left}
+          </Text>
+        ) : null}
+      </View>
+      <ProgressBar value={c.progress} color={green} height={5} onHeader />
+      <View className="flex-row items-center gap-3">
+        <View className="min-w-0 flex-shrink flex-row items-center gap-1.5">
+          <Icon icon={DoorOpenIcon} size={13} rawColor={text2} />
+          <Text numberOfLines={1} className="flex-shrink" style={{ fontSize: 12.5, lineHeight: 16, color: text2 }}>
+            {roomLine}
+          </Text>
+        </View>
+        <View className="flex-row items-center gap-1.5">
+          <Icon icon={UsersIcon} size={13} rawColor={text2} />
+          <Text numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 16, color: text2 }}>
+            {people}
+          </Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
-/** "Gia hạn đến" card: new end-time chips of the same day; taken ones are struck out and disabled. */
-export function ExtendCard({ options, value, onChange }: { options: ExtendOption[]; value?: number; onChange: (minutes: number) => void }) {
+type ExtendProps = {
+  /** The three quick chips (+15′, +30′, +60′). */
+  options: ExtendOption[];
+  /** End minute of the meeting today (chips show "+N′" from it). */
+  endMin: number;
+  value?: number;
+  onChange: (minutes: number) => void;
+  /** "Khác": pick any quarter hour. A custom choice shows in that chip. */
+  onOther: () => void;
+  roomName: string;
+  /** Room free until (minute of day), for the note under the chips. */
+  freeUntil: number | null;
+};
+
+/** "Gia hạn cuộc họp · Chỉ trong hôm nay" (6c): +15′ / +30′ / +60′ / Khác, then whether the room is free. */
+export function ExtendCard({ options, endMin, value, onChange, onOther, roomName, freeUntil }: ExtendProps) {
   const { t } = useTranslation();
   const { colors } = useTheme();
-  const taken = options.filter((o) => o.taken).map((o) => formatMinutes(o.minutes));
+  const custom = value !== undefined && !options.some((o) => o.minutes === value);
+  const fits = value !== undefined && freeUntil !== null && value <= freeUntil;
   return (
     <Card className="gap-3 p-4" testID="extend-card">
-      <SectionTitle right={t('meeting.sameDayOnly')}>{t('meeting.extendTo')}</SectionTitle>
-      {options.length ? (
-        <View className="flex-row gap-2">
-          {options.map((option) => {
-            const selected = value === option.minutes && !option.taken;
-            return (
-              <Pressable
-                key={option.minutes}
-                testID={`extend-${formatMinutes(option.minutes)}`}
-                accessibilityRole="radio"
-                accessibilityState={{ selected, disabled: option.taken }}
-                disabled={option.taken}
-                onPress={() => onChange(option.minutes)}
-                className={cn('h-[42px] flex-1 items-center justify-center rounded-[12px] active:opacity-80', !selected && !option.taken && 'border border-input-border')}
-                style={{ backgroundColor: selected ? colors.primary : option.taken ? colors.disabled : colors.elevated }}
-              >
-                <Text
-                  mono
-                  weight="semibold"
-                  maxFontSizeMultiplier={1.15}
-                  style={{
-                    fontSize: 13.5,
-                    lineHeight: 18,
-                    color: selected ? colors['on-primary'] : option.taken ? colors['disabled-text'] : colors.ink,
-                    textDecorationLine: option.taken ? 'line-through' : 'none',
-                  }}
-                >
-                  {formatMinutes(option.minutes)}
-                </Text>
-              </Pressable>
-            );
-          })}
+      <View className="flex-row items-center justify-between">
+        <Text weight="bold" accessibilityRole="header" style={{ fontSize: 15, lineHeight: 20 }}>
+          {t('meeting.extendTitle')}
+        </Text>
+        <Text className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
+          {t('meeting.sameDay')}
+        </Text>
+      </View>
+      <View className="flex-row gap-2">
+        {options.map((option) => (
+          <Chip
+            key={option.minutes}
+            testID={`extend-${formatMinutes(option.minutes)}`}
+            top={`+${option.minutes - endMin}′`}
+            bottom={formatMinutes(option.minutes)}
+            selected={value === option.minutes && !option.taken}
+            disabled={option.taken}
+            onPress={() => onChange(option.minutes)}
+          />
+        ))}
+        <Chip testID="extend-other" top="···" bottom={custom ? formatMinutes(value!) : t('meeting.other')} selected={custom} onPress={onOther} />
+      </View>
+      {value !== undefined ? (
+        <View className="flex-row items-center gap-2 rounded-[12px] px-3 py-2.5" style={{ backgroundColor: fits ? colors['success-tint'] : colors['warning-tint'] }}>
+          <Icon icon={fits ? CheckIcon : TriangleAlertIcon} size={14} weight="bold" rawColor={fits ? colors.success : colors.warning} />
+          <Text className="flex-1" style={{ fontSize: 12.5, lineHeight: 17, color: fits ? colors['success-text'] : colors['warning-text'] }}>
+            {fits || freeUntil === null ? t('meeting.freeUntil', { room: roomName, time: formatMinutes(freeUntil ?? value) }) : t('meeting.takenAt', { room: roomName, time: formatMinutes(freeUntil) })}
+          </Text>
         </View>
-      ) : null}
-      <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17 }}>
-        {!options.length ? t('meeting.extendNone') : taken.length ? t('meeting.extendTaken', { times: taken.join(', ') }) : t('meeting.extendNote')}
-      </Text>
+      ) : (
+        <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17 }}>
+          {t('meeting.extendNone')}
+        </Text>
+      )}
     </Card>
+  );
+}
+
+function Chip({ top, bottom, selected, disabled, onPress, testID }: { top: string; bottom: string; selected: boolean; disabled?: boolean; onPress: () => void; testID?: string }) {
+  const { colors } = useTheme();
+  const fg = selected ? colors['on-primary'] : disabled ? colors['disabled-text'] : colors.ink;
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="radio"
+      accessibilityState={{ selected, disabled: !!disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      className="h-[54px] min-w-0 flex-1 items-center justify-center gap-0.5 rounded-[12px] active:opacity-80"
+      style={{ backgroundColor: selected ? colors.primary : colors.panel }}
+    >
+      <Text mono weight="bold" maxFontSizeMultiplier={1.15} style={{ fontSize: 15, lineHeight: 19, color: fg, textDecorationLine: disabled ? 'line-through' : 'none' }}>
+        {top}
+      </Text>
+      <Text mono maxFontSizeMultiplier={1.15} style={{ fontSize: 11, lineHeight: 14, color: selected ? colors['on-primary'] : colors.muted, opacity: selected ? 0.85 : 1, textDecorationLine: disabled ? 'line-through' : 'none' }}>
+        {bottom}
+      </Text>
+    </Pressable>
   );
 }

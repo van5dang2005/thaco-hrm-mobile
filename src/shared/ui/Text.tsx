@@ -1,7 +1,6 @@
 import { Platform, Text as RNText, type TextProps as RNTextProps } from 'react-native';
 
-import { MAX_FONT_SCALE, type FontWeight } from '@/core/theme/fonts';
-import { useFontStyle } from '@/core/theme/fontStore';
+import { MAX_FONT_SCALE, useFontStyle, type FontWeight } from '@/core/theme/fonts';
 import { cn } from '@/shared/lib/cn';
 
 export type TextProps = RNTextProps & {

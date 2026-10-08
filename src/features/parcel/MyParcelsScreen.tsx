@@ -8,13 +8,14 @@ import { DEFAULT_PAGE_SIZE, flattenPages, nextPageParam } from '@/core/api/types
 import { qk } from '@/core/query/keys';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { useParcelMe } from '@/core/session/useMe';
-import { HeaderBar, HeaderPillButton } from '@/shared/ui/HeaderBar';
-import { HeaderChips } from '@/shared/ui/HeaderChips';
-import { HeaderStat, HeaderStatRow } from '@/shared/ui/HeaderStat';
+import { FloatingCard } from '@/shared/ui/Card';
+import { HeaderIconButton } from '@/shared/ui/HeaderBar';
 import { PackageIcon, UserCheckIcon } from '@/shared/ui/icons';
-import { ScreenShell, SHEET_PADDING } from '@/shared/ui/ScreenShell';
+import { ModuleHeader } from '@/shared/ui/ModuleHeader';
+import { CONTENT_PADDING, ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/shared/ui/StateViews';
+import { StatusTabs, type StatusTabItem } from '@/shared/ui/StatusTabs';
 import { Text } from '@/shared/ui/Text';
 
 import { parcelsApi } from './api';
@@ -22,12 +23,12 @@ import { ParcelCard } from './components/ParcelCard';
 import { useMyParcelStats } from './hooks';
 import { parcelTabs, type ParcelTab } from './logic';
 
-const tabs: { key: ParcelTab; label: 'parcels.tabPending' | 'parcels.tabOverdue' | 'parcels.tabHanded' | 'parcels.tabCancelled'; empty: 'parcels.emptyPending' | 'parcels.emptyOverdue' | 'parcels.emptyHanded' | 'parcels.emptyCancelled' }[] = [
-  { key: 'pending', label: 'parcels.tabPending', empty: 'parcels.emptyPending' },
-  { key: 'overdue', label: 'parcels.tabOverdue', empty: 'parcels.emptyOverdue' },
-  { key: 'handed', label: 'parcels.tabHanded', empty: 'parcels.emptyHanded' },
-  { key: 'cancelled', label: 'parcels.tabCancelled', empty: 'parcels.emptyCancelled' },
-];
+const empty: Record<ParcelTab, 'parcels.emptyPending' | 'parcels.emptyOverdue' | 'parcels.emptyHanded' | 'parcels.emptyCancelled'> = {
+  pending: 'parcels.emptyPending',
+  overdue: 'parcels.emptyOverdue',
+  handed: 'parcels.emptyHanded',
+  cancelled: 'parcels.emptyCancelled',
+};
 
 /** "Bưu phẩm của tôi" (6d): my parcels plus those I collect on someone's behalf. */
 export function MyParcelsScreen() {
@@ -45,30 +46,31 @@ export function MyParcelsScreen() {
     enabled: connected,
   });
   const items = flattenPages(query.data?.pages);
-  const current = tabs.find((x) => x.key === tab)!;
+
+  const tabs: StatusTabItem<ParcelTab>[] = [
+    { key: 'pending', label: t('parcels.tabPending'), count: stats.data?.waiting, tone: 'wait', testID: 'parcels-tab-pending' },
+    { key: 'overdue', label: t('parcels.tabOverdue'), count: stats.data?.overdue, tone: 'danger', alarm: true, testID: 'parcels-tab-overdue' },
+    { key: 'handed', label: t('parcels.tabHanded'), count: stats.data?.handedOver, tone: 'ok', testID: 'parcels-tab-handed' },
+    { key: 'cancelled', label: t('parcels.tabCancelled'), count: stats.data?.cancelled, tone: 'off', testID: 'parcels-tab-cancelled' },
+  ];
 
   const header = (
-    <>
-      <HeaderBar
-        title={t('parcels.title')}
-        right={<HeaderPillButton testID="parcels-delegations" icon={UserCheckIcon} label={t('parcels.delegation')} onPress={() => router.push('/parcels/delegations')} />}
-      />
-      <HeaderStatRow>
-        <HeaderStat testID="parcels-stat-pending" value={stats.data?.waiting} label={t('parcels.statPending')} />
-        <HeaderStat testID="parcels-stat-overdue" value={stats.data?.overdue} label={t('parcels.statOverdue')} />
-        <HeaderStat testID="parcels-stat-received" value={stats.data?.handedOver} label={t('parcels.statReceived')} />
-      </HeaderStatRow>
-      <HeaderChips
-        testID="parcels-tabs"
-        value={tab}
-        onChange={setTab}
-        options={tabs.map((x) => ({ value: x.key, label: t(x.label), testID: `parcels-tab-${x.key}` }))}
-      />
-    </>
+    <ModuleHeader
+      testID="parcels-header"
+      icon={PackageIcon}
+      title={t('parcels.title')}
+      right={<HeaderIconButton testID="parcels-delegations" icon={UserCheckIcon} label={t('parcels.delegation')} onPress={() => router.push('/parcels/delegations')} />}
+    />
+  );
+
+  const floating = (
+    <FloatingCard>
+      <StatusTabs testID="parcels-tabs" items={tabs} value={tab} onChange={setTab} />
+    </FloatingCard>
   );
 
   return (
-    <ScreenShell header={header} scroll={false}>
+    <ModuleScreen header={header} floating={floating} scroll={false}>
       {query.isLoading ? (
         <View className="p-4">
           <ListSkeleton count={3} lines={4} />
@@ -79,7 +81,12 @@ export function MyParcelsScreen() {
         <FlatList
           data={items}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={{ padding: SHEET_PADDING.horizontal, paddingTop: SHEET_PADDING.top, paddingBottom: SHEET_PADDING.bottom, gap: SHEET_PADDING.gap }}
+          contentContainerStyle={{
+            paddingHorizontal: CONTENT_PADDING.horizontal,
+            paddingTop: CONTENT_PADDING.top,
+            paddingBottom: CONTENT_PADDING.bottom,
+            gap: CONTENT_PADDING.gap,
+          }}
           renderItem={({ item }) => (
             <ParcelCard parcel={item} myCode={me.data?.employeeCode} onPress={() => router.push({ pathname: '/parcels/[id]', params: { id: item.id } })} />
           )}
@@ -96,17 +103,10 @@ export function MyParcelsScreen() {
           onEndReached={() => {
             if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
           }}
-          ListEmptyComponent={
-            <EmptyState
-              icon={PackageIcon}
-              message={t(current.empty)}
-              actionLabel={tab === 'pending' ? t('parcels.delegation') : undefined}
-              onAction={tab === 'pending' ? () => router.push('/parcels/delegations') : undefined}
-            />
-          }
+          ListEmptyComponent={<EmptyState testID="parcels-empty" message={t(empty[tab])} />}
           ListFooterComponent={query.isFetchingNextPage ? <Text className="py-4 text-center text-meta text-muted">{t('common.loadMore')}</Text> : null}
         />
       )}
-    </ScreenShell>
+    </ModuleScreen>
   );
 }

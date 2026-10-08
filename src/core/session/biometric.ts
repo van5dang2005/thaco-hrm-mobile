@@ -40,6 +40,12 @@ export async function enableBiometric(credentials: LoginRequest, prompt: string)
   kv.set(kvKeys.biometricEnabled, true);
 }
 
+/** One Face ID / fingerprint check (turning biometric sign-in on from Profile). */
+export async function confirmBiometric(prompt: string, cancelLabel: string) {
+  const result = await LocalAuthentication.authenticateAsync({ promptMessage: prompt, cancelLabel, disableDeviceFallback: false });
+  return result.success;
+}
+
 export async function readBiometricCredentials(prompt: string): Promise<LoginRequest | null> {
   const raw = await SecureStore.getItemAsync(CREDENTIALS_KEY, { requireAuthentication: true, authenticationPrompt: prompt });
   return raw ? (JSON.parse(raw) as LoginRequest) : null;

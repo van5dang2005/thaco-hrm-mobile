@@ -3,25 +3,24 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { cn } from '@/shared/lib/cn';
+import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Icon } from '@/shared/ui/Icon';
-import { CheckIcon } from '@/shared/ui/icons';
-import { BottomSheet } from '@/shared/ui/BottomSheet';
+import { CheckIcon, LayoutGridIcon } from '@/shared/ui/icons';
 import { SwitchRow } from '@/shared/ui/SwitchRow';
 import { Text } from '@/shared/ui/Text';
 
 import { type HomeLayout, homeLayouts, useEffectiveHomePrefs, useHomePrefs } from './prefs';
 
-type Props = { visible: boolean; onClose: () => void };
+type Props = { visible: boolean; onClose: () => void; /** "Sắp xếp tiện ích" (hidden when absent). */ onSort?: () => void };
 
 /**
  * "Giao diện trang chủ" (2h). Choices are kept as a draft that the home screen previews behind the
  * sheet; "Áp dụng" saves them, closing any other way discards them.
  */
-export function HomeLayoutSheet({ visible, onClose }: Props) {
+export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
   const { t } = useTranslation();
-  const { layout, showProfile } = useEffectiveHomePrefs();
+  const { layout, showTodo, showNextMeeting } = useEffectiveHomePrefs();
   const startDraft = useHomePrefs((s) => s.startDraft);
   const updateDraft = useHomePrefs((s) => s.updateDraft);
   const applyDraft = useHomePrefs((s) => s.applyDraft);
@@ -39,32 +38,59 @@ export function HomeLayoutSheet({ visible, onClose }: Props) {
     onClose();
   };
 
+  const sort = () => {
+    applyDraft();
+    onClose();
+    onSort?.();
+  };
+
   return (
     <BottomSheet
       testID="home-layout-sheet"
       visible={visible}
       onClose={onClose}
+      icon={LayoutGridIcon}
+      iconTone="brand"
       title={t('home.layoutSheet.title')}
-      footer={<Button testID="home-layout-apply" label={t('home.layoutSheet.apply')} size="lg" onPress={apply} />}
+      subtitle={t('home.layoutSheet.subtitle')}
+      footer={
+        <View className="flex-row gap-2.5">
+          {onSort ? <Button testID="home-layout-sort" className="flex-1" variant="soft" size="xl" label={t('home.layoutSheet.sort')} onPress={sort} /> : null}
+          <Button testID="home-layout-apply" className="flex-[1.2]" size="xl" label={t('home.layoutSheet.apply')} onPress={apply} />
+        </View>
+      }
     >
-      <Text className="-mt-3 text-sub text-muted">{t('home.layoutSheet.subtitle')}</Text>
       <View className="flex-row gap-2" accessibilityRole="radiogroup">
         {homeLayouts.map((option) => (
           <LayoutOption key={option} layout={option} selected={option === layout} onPress={() => updateDraft({ layout: option })} />
         ))}
       </View>
-      <SwitchRow
-        testID="home-layout-show-profile"
-        label={t('home.layoutSheet.showProfile')}
-        value={showProfile}
-        onChange={(value) => updateDraft({ showProfile: value })}
-      />
+      <View>
+        <SwitchRow
+          testID="home-layout-show-todo"
+          label={t('home.layoutSheet.showTodo')}
+          hint={t('home.layoutSheet.showTodoHint')}
+          value={showTodo}
+          onChange={(value) => updateDraft({ showTodo: value })}
+          className="py-1.5"
+        />
+        <View className="h-px bg-line-2" />
+        <SwitchRow
+          testID="home-layout-show-next-meeting"
+          label={t('home.layoutSheet.showNextMeeting')}
+          hint={t('home.layoutSheet.showNextMeetingHint')}
+          value={showNextMeeting}
+          onChange={(value) => updateDraft({ showNextMeeting: value })}
+          className="py-1.5"
+        />
+      </View>
     </BottomSheet>
   );
 }
 
 function LayoutOption({ layout, selected, onPress }: { layout: HomeLayout; selected: boolean; onPress: () => void }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
   const name = t(`home.layouts.${layout}.name`);
   return (
     <Pressable
@@ -73,44 +99,49 @@ function LayoutOption({ layout, selected, onPress }: { layout: HomeLayout; selec
       accessibilityState={{ checked: selected }}
       accessibilityLabel={`${name}, ${t(`home.layouts.${layout}.description`)}`}
       onPress={onPress}
-      className={cn('flex-1 gap-2 rounded-[16px] p-2', selected ? 'border-2 border-primary bg-selected-tint' : 'border border-line bg-surface')}
-      // Keep the content in place when the border grows from 1 to 2.
-      style={selected ? undefined : { padding: 9 }}
+      className="min-w-0 flex-1 gap-2 rounded-[16px] p-2 active:opacity-80"
+      style={{ backgroundColor: selected ? colors.elevated : colors.panel, borderWidth: 2, borderColor: selected ? colors.primary : 'transparent' }}
     >
-      <Thumbnail layout={layout} />
-      <View className="flex-row items-center justify-between gap-1 px-0.5">
-        <Text weight="semibold" numberOfLines={1} className="flex-shrink text-sub">
+      <View>
+        <Thumbnail layout={layout} />
+        <View className="absolute right-1 top-1">
+          <Radio selected={selected} />
+        </View>
+      </View>
+      <View className="px-1 pb-0.5">
+        <Text weight="bold" numberOfLines={1} style={{ fontSize: 13.5, lineHeight: 18, color: selected ? colors.primary : colors.ink }}>
           {name}
         </Text>
-        <Radio selected={selected} />
+        <Text numberOfLines={2} className="text-muted" style={{ fontSize: 11, lineHeight: 14 }}>
+          {t(`home.layouts.${layout}.description`)}
+        </Text>
       </View>
-      <Text className="px-0.5 pb-0.5 text-meta-sm text-muted">{t(`home.layouts.${layout}.description`)}</Text>
     </Pressable>
   );
 }
 
 function Radio({ selected }: { selected: boolean }) {
   return selected ? (
-    <View className="h-[18px] w-[18px] items-center justify-center rounded-full bg-primary">
-      <Icon icon={CheckIcon} size={10} weight="bold" color="on-primary" />
+    <View className="h-5 w-5 items-center justify-center rounded-full bg-primary">
+      <Icon icon={CheckIcon} size={11} weight="bold" color="on-primary" />
     </View>
   ) : (
-    <View className="h-[18px] w-[18px] rounded-full border-2 border-line-strong" />
+    <View className="h-5 w-5 rounded-full border-[1.5px] border-line-strong bg-elevated" />
   );
 }
 
-/** 76px sketch of each layout, drawn with Views so it follows the theme. */
+/** 64px sketch of each layout, drawn with Views so it follows the theme. */
 function Thumbnail({ layout }: { layout: HomeLayout }) {
-  const { colors } = useTheme();
-  const box = 'h-[76px] w-full justify-center rounded-[10px] bg-bg p-2';
+  const box = 'h-16 w-full justify-center rounded-[10px] bg-elevated px-2';
+  const block = 'rounded-[3px] bg-primary-tint-2';
 
   if (layout === 'grid') {
     return (
-      <View className={box} style={{ rowGap: 6 }}>
+      <View className={box} style={{ rowGap: 5 }}>
         {[0, 1, 2].map((row) => (
-          <View key={row} className="flex-row justify-around">
-            {[0, 1, 2].map((col) => (
-              <View key={col} className="h-4 w-4 rounded-full bg-thumb-dot" />
+          <View key={row} className="flex-row" style={{ columnGap: 4 }}>
+            {[0, 1, 2, 3].map((col) => (
+              <View key={col} className={`h-2.5 flex-1 ${block}`} />
             ))}
           </View>
         ))}
@@ -119,35 +150,26 @@ function Thumbnail({ layout }: { layout: HomeLayout }) {
   }
 
   if (layout === 'grouped') {
-    const tiles = (count: number, alt: boolean) => (
-      <View className="flex-row" style={{ columnGap: 4 }}>
-        {Array.from({ length: 4 }, (_, i) => (
-          <View key={i} className="h-3 flex-1 rounded-[4px]" style={{ backgroundColor: i < count ? colors[alt ? 'thumb-dot-alt' : 'thumb-dot'] : 'transparent' }} />
-        ))}
-      </View>
-    );
     return (
-      <View className={box} style={{ rowGap: 4 }}>
-        <View className="h-[3px] w-6 rounded-[2px] bg-line-strong" />
-        {tiles(4, false)}
-        <View className="mt-[3px] h-[3px] w-5 rounded-[2px] bg-line-strong" />
-        {tiles(2, true)}
+      <View className={box} style={{ rowGap: 6 }}>
+        {[0, 1].map((row) => (
+          <View key={row} className="h-[18px] flex-row items-center gap-1 rounded-[4px] border border-line px-1">
+            {[0, 1, 2].map((col) => (
+              <View key={col} className={`h-2 flex-1 ${block}`} />
+            ))}
+          </View>
+        ))}
       </View>
     );
   }
 
   return (
-    <View className={box} style={{ rowGap: 5 }}>
-      {[0, 1, 2].map((row) => (
-        <View key={row} className="flex-row" style={{ columnGap: 5 }}>
-          {[0, 1].map((col) => (
-            <View key={col} className="h-4 flex-1 flex-row items-center gap-[3px] rounded-[5px] border border-track bg-surface px-[3px]">
-              <View className="h-[9px] w-[9px] rounded-[3px] bg-thumb-dot" />
-              <View className="h-[3px] flex-1 rounded-[2px] bg-track" />
-            </View>
-          ))}
-        </View>
-      ))}
+    <View className={box} style={{ rowGap: 4 }}>
+      <View className="flex-row" style={{ columnGap: 4 }}>
+        <View className={`h-6 flex-1 ${block}`} />
+        <View className={`h-6 flex-1 ${block}`} />
+      </View>
+      <View className={`h-3 w-1/2 ${block}`} />
     </View>
   );
 }

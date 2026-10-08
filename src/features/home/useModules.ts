@@ -7,13 +7,15 @@ import { useSessionStore } from '@/core/session/sessionStore';
 
 import { filterModules } from './moduleFilter';
 import { homeModules, type HomeModule } from './modules';
+import { orderModules, useHomePrefs } from './prefs';
 import type { Signal } from './signals';
 
-/** Modules the user may see (connected services + permissions), in config order. */
+/** Modules the user may see (connected services + permissions), in the user's order. */
 export function useHomeModules() {
   const { has } = useCapabilities();
   const connected = useSessionStore((s) => s.connected);
-  return filterModules(homeModules, { connected, has });
+  const order = useHomePrefs((s) => s.order);
+  return orderModules(filterModules(homeModules, { connected, has }), order);
 }
 
 export type ModuleSignals = Record<string, { badge?: Signal<number>; summary?: Signal<string> }>;

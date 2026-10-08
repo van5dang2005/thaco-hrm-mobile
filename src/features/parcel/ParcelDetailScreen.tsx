@@ -14,15 +14,17 @@ import { goBack } from '@/shared/lib/navigation';
 import { Banner } from '@/shared/ui/Banner';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
-import { Card } from '@/shared/ui/Card';
-import { HeaderBar, HeaderIconButton } from '@/shared/ui/HeaderBar';
+import { Card, FloatingCard } from '@/shared/ui/Card';
+import { HeaderIconButton } from '@/shared/ui/HeaderBar';
 import { HeaderPill, useHeaderDot } from '@/shared/ui/HeaderPill';
-import { DotsThreeIcon, NoteIcon, UserCheckIcon } from '@/shared/ui/icons';
+import { EllipsisIcon, StickyNoteIcon, UserCheckIcon, PackageIcon } from '@/shared/ui/icons';
 import { KeyValueRow } from '@/shared/ui/KeyValueRow';
+import { ModuleHeader } from '@/shared/ui/ModuleHeader';
+import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { NoteField } from '@/shared/ui/NoteField';
 import { PersonRow } from '@/shared/ui/PersonRow';
 import { RoundIcon } from '@/shared/ui/RoundIcon';
-import { ScreenShell, useHeaderColors } from '@/shared/ui/ScreenShell';
+import { useHeaderColors } from '@/shared/ui/ScreenShell';
 import { SectionTitle } from '@/shared/ui/SectionTitle';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/StateViews';
@@ -32,11 +34,11 @@ import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
 
 import { parcelsApi } from './api';
-import { LifecyclePanel } from './components/DeadlineBars';
+import { daysLeftLabel, LifecyclePanel } from './components/DeadlineBars';
 import { ParcelTimeline } from './components/ParcelTimeline';
 import { PhotoStrip } from './components/PhotoStrip';
 import { useMyDelegations, useParcel } from './hooks';
-import { activeDefaultOf, isOpenParcel, parcelDeadline, senderTitle } from './logic';
+import { activeDefaultOf, isOpenParcel, MAX_PARCEL_FILES, parcelDeadline, senderTitle } from './logic';
 import { DelegationStatus, ParcelStatus, type RelatedUserSummary } from './types';
 
 const summaryPerson = (u?: RelatedUserSummary | null) =>
@@ -44,11 +46,11 @@ const summaryPerson = (u?: RelatedUserSummary | null) =>
 
 type MoreAction = { label: string; destructive?: boolean; onPress: () => void };
 
-/** Chi tiết bưu phẩm (6e): status + lifecycle on the header; info, delegation and history in the sheet. */
+/** Chi tiết bưu phẩm (6e): status + lifecycle on the header, info card over it, photos, delegation and history below. */
 export function ParcelDetailScreen() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const { fg, sub } = useHeaderColors();
+  const { fg, text2 } = useHeaderColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const parcel = useParcel(id);
   const me = useParcelMe();
@@ -97,13 +99,17 @@ export function ParcelDetailScreen() {
     onError,
   });
 
-  const title = t('parcels.detailTitle');
+  const header = (content: ReactNode, right?: ReactNode, bottom = 18) => (
+    <ModuleHeader testID="parcel-header" icon={PackageIcon} title={t('parcels.detailTitle')} subtitle={p?.trackingNumber} subtitleMono right={right} bottom={bottom}>
+      {content}
+    </ModuleHeader>
+  );
 
   if (!p) {
     return (
-      <ScreenShell header={<HeaderBar title={title} />}>
+      <ModuleScreen header={header(null, undefined, 24)}>
         {parcel.isError ? <ErrorState error={parcel.error} onRetry={() => void parcel.refetch()} /> : <ListSkeleton count={3} />}
-      </ScreenShell>
+      </ModuleScreen>
     );
   }
 
@@ -134,7 +140,7 @@ export function ParcelDetailScreen() {
     }
     if (open) {
       actions.push(
-        <Button key="handover" testID="parcel-handover" className="flex-1" icon={UserCheckIcon} label={t('parcels.handover')} onPress={() => router.push({ pathname: '/parcels/reception/handover', params: { ids: p.id } })} />,
+        <Button key="handover" testID="parcel-handover" className="flex-[1.4]" icon={UserCheckIcon} label={t('parcels.handover')} onPress={() => router.push({ pathname: '/parcels/reception/handover', params: { ids: p.id } })} />,
       );
     }
     if (p.status === ParcelStatus.Cancelled && !p.cancellationReason) {
@@ -142,73 +148,105 @@ export function ParcelDetailScreen() {
     }
   }
 
-  const header = (
-    <>
-      <HeaderBar
-        testID="parcel-header"
-        title={title}
-        right={
-          more.length ? (
-            <HeaderIconButton
-              testID="parcel-more"
-              icon={DotsThreeIcon}
-              label={t('common.more')}
-              onPress={() =>
-                Alert.alert(p.transactionCode, undefined, [
-                  ...more.map((m) => ({ text: m.label, style: m.destructive ? ('destructive' as const) : ('default' as const), onPress: m.onPress })),
-                  { text: t('common.cancel'), style: 'cancel' as const },
-                ])
-              }
-            />
-          ) : undefined
-        }
-      />
-      <View className="gap-2 px-3 pt-2">
-        <View className="flex-row">
-          <HeaderPill testID="parcel-status" label={t(`status.parcel.${String(p.status) as '1'}`)} dotColor={statusDot} />
-        </View>
-        <Text weight="bold" numberOfLines={2} accessibilityRole="header" style={{ fontSize: 22, lineHeight: 28, color: fg }}>
-          {senderTitle(p)}
-        </Text>
-        <Text mono numberOfLines={2} style={{ fontSize: 12.5, lineHeight: 17, color: sub }}>
-          {`${p.trackingNumber} · ${p.transactionCode}`}
-        </Text>
-        {p.status === ParcelStatus.HandedOver && handOverAt ? (
-          <Text numberOfLines={2} style={{ fontSize: 13, lineHeight: 18, color: sub }}>
-            {`${t('parcels.handedOverOn', { date: `${formatTime(handOverAt)} ${formatDate(handOverAt)}` })}${p.actualReceiverCode ? ` · ${p.actualReceiverCode}` : ''}`}
-          </Text>
-        ) : null}
-        {p.status === ParcelStatus.Cancelled ? (
-          <Text numberOfLines={1} style={{ fontSize: 13, lineHeight: 18, color: sub }}>
-            {t('parcels.cancelledOn', { date: cancelledAt ? formatDayMonth(cancelledAt) : '' })}
-          </Text>
-        ) : null}
+  // "Không đến nhận được?": my open parcel with nobody collecting it yet.
+  const canAskDelegate = open && isMine && !related;
+  const delegate = () => router.push({ pathname: '/parcels/delegations/new', params: { parcelId: p.id } });
+  const delegateInFooter = canAskDelegate && !blockingDefault && !actions.length;
+
+  const moreButton = more.length ? (
+    <HeaderIconButton
+      testID="parcel-more"
+      icon={EllipsisIcon}
+      label={t('common.more')}
+      onPress={() =>
+        Alert.alert(p.transactionCode, undefined, [
+          ...more.map((m) => ({ text: m.label, style: m.destructive ? ('destructive' as const) : ('default' as const), onPress: m.onPress })),
+          { text: t('common.cancel'), style: 'cancel' as const },
+        ])
+      }
+    />
+  ) : undefined;
+
+  const statusLabel = t(`status.parcel.${String(p.status) as '1'}`);
+  const pill =
+    p.status === ParcelStatus.Overdue && deadline
+      ? daysLeftLabel(t, deadline)
+      : open && deadline
+        ? `${statusLabel} · ${daysLeftLabel(t, deadline).toLocaleLowerCase()}`
+        : statusLabel;
+  const closedLine =
+    p.status === ParcelStatus.HandedOver && handOverAt
+      ? `${t('parcels.handedOverOn', { date: `${formatTime(handOverAt)} ${formatDate(handOverAt)}` })}${p.actualReceiverCode ? ` · ${p.actualReceiverCode}` : ''}`
+      : p.status === ParcelStatus.Cancelled
+        ? t('parcels.cancelledOn', { date: cancelledAt ? formatDayMonth(cancelledAt) : '' })
+        : null;
+
+  const headerContent = (
+    <View className="gap-2.5">
+      <View className="flex-row">
+        <HeaderPill testID="parcel-status" label={pill} dotColor={statusDot} />
       </View>
+      <Text weight="bold" numberOfLines={2} accessibilityRole="header" style={{ fontSize: 24, lineHeight: 30, letterSpacing: -0.3, color: fg }}>
+        {senderTitle(p)}
+      </Text>
+      {closedLine ? (
+        <Text numberOfLines={2} style={{ fontSize: 13, lineHeight: 18, color: text2 }}>
+          {closedLine}
+        </Text>
+      ) : null}
       {open && deadline ? <LifecyclePanel status={p.status} deadline={deadline} /> : null}
-    </>
+    </View>
   );
 
+  const sender = [p.senderFullName, p.senderCompanyName && p.senderCompanyName !== p.senderFullName ? p.senderCompanyName : null].filter(Boolean).join(' · ');
+  const info = (
+    <FloatingCard radius={20} testID="parcel-info">
+      <KeyValueRow label={t('parcels.sender')} value={sender} />
+      {p.senderPhoneNumber ? <KeyValueRow divider label={t('parcels.senderPhone')} value={p.senderPhoneNumber} mono /> : null}
+      {p.senderAddress ? <KeyValueRow divider label={t('parcels.senderAddress')} value={p.senderAddress} /> : null}
+      <KeyValueRow divider label={t('parcels.code')} value={p.transactionCode} mono />
+      {!isMine ? <KeyValueRow divider label={t('parcels.receiver')} value={`${p.receiverFullName} · ${p.receiverCode}`} /> : null}
+      <KeyValueRow divider label={t('parcels.department')} value={p.departmentName ?? '—'} />
+      {p.description ? <KeyValueRow divider label={t('parcels.description')} value={p.description} /> : null}
+      {p.note ? <KeyValueRow divider label={t('parcels.note')} value={p.note} /> : null}
+      {p.cancellationReason ? <KeyValueRow divider label={t('parcels.cancellationReason')} value={p.cancellationReason} /> : null}
+    </FloatingCard>
+  );
+
+  const footer = delegateInFooter ? (
+    <>
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text numberOfLines={1} className="text-muted" style={{ fontSize: 11.5, lineHeight: 15 }}>
+          {t('parcels.cantCollect')}
+        </Text>
+        <Text weight="semibold" numberOfLines={2} style={{ fontSize: 13.5, lineHeight: 18 }}>
+          {t('parcels.askColleague')}
+        </Text>
+      </View>
+      <Button testID="parcel-delegate" icon={UserCheckIcon} label={t('parcels.delegate')} onPress={delegate} />
+    </>
+  ) : actions.length ? (
+    actions
+  ) : undefined;
+
   return (
-    <ScreenShell header={header} footer={actions.length ? actions : undefined} refreshControl={<RefreshControl refreshing={parcel.isRefetching} onRefresh={() => void parcel.refetch()} />}>
-      <Card>
-        <KeyValueRow label={t('parcels.sender')} value={[p.senderFullName, p.senderPhoneNumber].filter(Boolean).join(' · ')} />
-        {p.senderCompanyName && p.senderCompanyName !== p.senderFullName ? <KeyValueRow divider label={t('parcels.company')} value={p.senderCompanyName} /> : null}
-        {p.senderAddress ? <KeyValueRow divider label={t('parcels.senderAddress')} value={p.senderAddress} /> : null}
-        {!isMine ? <KeyValueRow divider label={t('parcels.receiver')} value={`${p.receiverFullName} · ${p.receiverCode}`} /> : null}
-        <KeyValueRow divider label={t('parcels.department')} value={p.departmentName ?? '—'} />
-        {p.description ? <KeyValueRow divider label={t('parcels.description')} value={p.description} /> : null}
-        {p.note ? <KeyValueRow divider label={t('parcels.note')} value={p.note} /> : null}
-        {p.cancellationReason ? <KeyValueRow divider label={t('parcels.cancellationReason')} value={p.cancellationReason} /> : null}
-        {p.attachments.length ? (
-          <View className="border-t border-line-2 px-3.5 py-3">
-            <PhotoStrip attachments={p.attachments} />
-          </View>
-        ) : null}
-      </Card>
+    <ModuleScreen
+      header={header(headerContent, moreButton)}
+      floating={info}
+      floatingScrolls
+      footer={footer}
+      refreshControl={<RefreshControl refreshing={parcel.isRefetching} onRefresh={() => void parcel.refetch()} />}
+    >
+      {p.attachments.length ? (
+        <Card className="gap-2.5 p-3.5">
+          <SectionTitle right={`${p.attachments.length}/${MAX_PARCEL_FILES}`}>{t('parcels.photosTitle')}</SectionTitle>
+          <PhotoStrip attachments={p.attachments} />
+        </Card>
+      ) : null}
 
       {open && related ? (
         <Card className="gap-3 p-3.5">
-          <SectionTitle right={<DelegationBadge status={related.status} />}>{t('parcels.delegatedTo')}</SectionTitle>
+          <SectionTitle right={<DelegationBadge status={related.status} dot />}>{t('parcels.delegatedTo')}</SectionTitle>
           {summaryPerson(related.delegator) ? <PersonRow person={summaryPerson(related.delegator)!} size={40} strong /> : null}
           <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17 }}>
             {related.parcelId
@@ -219,25 +257,23 @@ export function ParcelDetailScreen() {
             <Banner tone="info">{t('parcels.pendingRenew', { date: formatDayMonth(parseServerDate(related.pendingEndDate)) })}</Banner>
           ) : null}
         </Card>
-      ) : open && isMine ? (
+      ) : canAskDelegate && !delegateInFooter ? (
         <Card className="flex-row items-center gap-3 p-3.5">
           <RoundIcon icon={UserCheckIcon} tone="wait" />
           <View className="min-w-0 flex-1 gap-0.5">
             <Text weight="semibold" style={{ fontSize: 14, lineHeight: 19 }}>
-              {t('parcels.noDelegate')}
+              {t('parcels.cantCollect')}
             </Text>
             <Text className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
-              {blockingDefault ? t('parcels.defaultBlocks') : t('parcels.noDelegateHint')}
+              {blockingDefault ? t('parcels.defaultBlocks') : t('parcels.askColleague')}
             </Text>
           </View>
-          {!blockingDefault ? (
-            <Button testID="parcel-delegate" size="sm" label={t('parcels.delegate')} onPress={() => router.push({ pathname: '/parcels/delegations/new', params: { parcelId: p.id } })} />
-          ) : null}
+          {!blockingDefault ? <Button testID="parcel-delegate" size="sm" label={t('parcels.delegate')} onPress={delegate} /> : null}
         </Card>
       ) : null}
 
       {p.logs.length ? (
-        <Card className="gap-3 px-4 py-3.5">
+        <Card className="gap-3 p-3.5">
           <SectionTitle>{t('parcels.history')}</SectionTitle>
           <ParcelTimeline logs={p.logs} status={p.status} />
         </Card>
@@ -246,7 +282,7 @@ export function ParcelDetailScreen() {
       <BottomSheet
         visible={noteOpen}
         onClose={() => setNoteOpen(false)}
-        icon={NoteIcon}
+        icon={StickyNoteIcon}
         iconTone="off"
         title={t('reception.cancelNote')}
         caption={p.transactionCode}
@@ -255,6 +291,6 @@ export function ParcelDetailScreen() {
         <Text className="text-sub text-muted">{t('reception.cancelNoteHint')}</Text>
         <NoteField value={cancelNote} onChangeText={setCancelNote} />
       </BottomSheet>
-    </ScreenShell>
+    </ModuleScreen>
   );
 }

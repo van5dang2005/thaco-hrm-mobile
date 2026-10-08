@@ -18,7 +18,9 @@ type Props = {
   title?: string;
   /** Mono caption: above the title, or under it when the sheet has an `icon` ("PH-2610-0183 · Cấp 2/2"). */
   caption?: string;
-  /** 44pt round icon before the title, plus a close button on the right (design 3h). */
+  /** Plain second line under the title (icon headers): "Chọn cách sắp xếp tiện ích". */
+  subtitle?: string;
+  /** 44pt rounded-square icon before the title, plus a close button on the right (design 3h, 2h). */
   icon?: AppIcon;
   iconTone?: RoundIconTone;
   children: ReactNode;
@@ -35,8 +37,8 @@ const DURATION = 240;
 const BACKDROP = '#0B1420';
 const BACKDROP_OPACITY = 0.55;
 
-/** Bottom sheet: slides up over a dimmed backdrop, 28pt top radius, 36×5 grab handle. */
-export function BottomSheet({ visible, onClose, title, caption, icon, iconTone = 'ok', children, footer, scrollable, maxHeightRatio = 0.9, testID }: Props) {
+/** Bottom sheet: slides up over a dimmed backdrop, 28pt top radius, 40×5 grab handle. */
+export function BottomSheet({ visible, onClose, title, caption, subtitle, icon, iconTone = 'ok', children, footer, scrollable, maxHeightRatio = 0.9, testID }: Props) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -74,7 +76,7 @@ export function BottomSheet({ visible, onClose, title, caption, icon, iconTone =
 
   const heading = icon ? (
     <View className="flex-row items-center gap-3">
-      <RoundIcon icon={icon} size={44} tone={iconTone} />
+      <RoundIcon icon={icon} size={44} tone={iconTone} square />
       <View className="min-w-0 flex-1 gap-0.5">
         {title ? (
           <Text weight="bold" numberOfLines={2} accessibilityRole="header" style={{ fontSize: 17, lineHeight: 21 }}>
@@ -86,13 +88,18 @@ export function BottomSheet({ visible, onClose, title, caption, icon, iconTone =
             {caption}
           </Text>
         ) : null}
+        {subtitle ? (
+          <Text numberOfLines={2} className="text-muted" style={{ fontSize: 12.5, lineHeight: 17 }}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={t('common.close')}
         onPress={onClose}
         hitSlop={6}
-        className="h-9 w-9 items-center justify-center rounded-full active:opacity-70"
+        className="h-9 w-9 items-center justify-center rounded-[12px] active:opacity-70"
         style={{ backgroundColor: colors.field }}
       >
         <Icon icon={XIcon} size={16} weight="bold" color="muted" />
@@ -133,7 +140,7 @@ export function BottomSheet({ visible, onClose, title, caption, icon, iconTone =
           ]}
         >
           <View className="items-center pb-2 pt-2.5">
-            <View className="h-[5px] w-9 rounded-[3px] bg-input-border" />
+            <View className="h-[5px] w-10 rounded-[3px] bg-input-border" />
           </View>
           <View className="flex-shrink px-4" style={{ gap: 14 }}>
             {heading}

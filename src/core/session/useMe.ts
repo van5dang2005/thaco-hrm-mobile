@@ -45,6 +45,8 @@ export function useProfile() {
     unitName: p?.unitName ?? r?.unitName ?? null,
     jobTitleName: p?.jobTitleName ?? r?.jobTitles?.[0]?.name ?? null,
     positionName: p?.positionName ?? r?.positions?.[0]?.name ?? null,
+    /** Areas of the room-service department ("KCN THACO Chu Lai"), else the unit path. */
+    workplace: (r?.departments?.[0]?.areas ?? []).map((x) => x.name).filter(Boolean).join(' · ') || p?.unitFullPathName || null,
     parcelUser: p,
     roomUser: r,
   };

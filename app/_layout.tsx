@@ -16,8 +16,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { queryClient, queryPersister } from '@/core/query/queryClient';
 import { onSessionExpired, restoreSession } from '@/core/session/session';
 import { useSessionStore } from '@/core/session/sessionStore';
-import { monoAssets } from '@/core/theme/fonts';
-import { initialUiFontAssets } from '@/core/theme/fontStore';
+import { monoAssets, uiAssets } from '@/core/theme/fonts';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
 import { toast, ToastHost } from '@/shared/ui/Toast';
 
@@ -31,7 +30,7 @@ const persistOptions = {
 
 void restoreSession();
 
-const startupFonts = { ...monoAssets, ...initialUiFontAssets() };
+const startupFonts = { ...monoAssets, ...uiAssets };
 
 function RootNavigator() {
   const { scheme, colors } = useTheme();
