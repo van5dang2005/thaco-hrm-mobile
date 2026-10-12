@@ -1,4 +1,5 @@
-# Run with the mock API (npm run mock:api) and Metro running:  maestro test .maestro
+# Run with Metro and the app installed:  maestro test .maestro
+# The flows were written against the removed mock API's data (lan.nt / khoa.nm / nhung.vh, password 123456).
 flows:
   - "0*.yaml"
 executionOrder:

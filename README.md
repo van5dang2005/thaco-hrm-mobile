@@ -16,7 +16,6 @@ Yêu cầu: Node 20+, Android Studio (emulator) và/hoặc **Xcode ≥ 26.4** (x
 ```bash
 npm install
 npm run env:pull               # tải biến môi trường development từ expo.dev về .env
-npm run mock:api               # mock cả hai back-end ở :4001 (bưu phẩm) và :4002 (phòng họp)
 npm start                      # Metro
 npm run android                # build + cài development build lên emulator / máy thật
 ```
@@ -28,7 +27,7 @@ Cấu hình app nằm ở `app.config.ts`. Biến môi trường được quản
 | Biến | Ý nghĩa |
 |---|---|
 | `APP_ENV` | development / preview / production; đổi tên app thành "THACO HRM (Dev)" / "(Preview)" / "THACO HRM". Khi build, `eas.json` tự đặt theo profile |
-| `EXPO_PUBLIC_PARCEL_API_URL`, `EXPO_PUBLIC_ROOM_API_URL` | Gốc URL hai back-end (không có `/api`). Mock: `http://localhost:4001`, `http://localhost:4002` |
+| `EXPO_PUBLIC_PARCEL_API_URL`, `EXPO_PUBLIC_ROOM_API_URL` | Gốc URL hai back-end (không có `/api`). Back-end .NET chạy local: `http://localhost:5211` (bưu phẩm), `http://localhost:5113` (phòng họp) |
 | `EXPO_PUBLIC_PAYTIME_URL`, `EXPO_PUBLIC_PAYTIME_IOS_STORE_URL`, `EXPO_PUBLIC_PAYTIME_ANDROID_STORE_URL` | Mở app THACO Paytime, hoặc trang cửa hàng nếu chưa cài |
 | `EXPO_PUBLIC_IT_SUPPORT_PHONE` | Số hotline IT ở màn đăng nhập (tùy chọn) |
 
@@ -55,23 +54,8 @@ Build local cần Java 17, Android SDK (`ANDROID_HOME`) và `eas login`. Lần b
 Android emulator cần chuyển cổng để `localhost` trỏ về máy dev:
 
 ```bash
-adb reverse tcp:8081 tcp:8081 && adb reverse tcp:4001 tcp:4001 && adb reverse tcp:4002 tcp:4002
+adb reverse tcp:8081 tcp:8081 && adb reverse tcp:5211 tcp:5211 && adb reverse tcp:5113 tcp:5113
 ```
-
-### Tài khoản mock
-
-Mật khẩu chung `123456`, domain để mặc định.
-
-| Tài khoản | Vai trò trong dữ liệu mẫu |
-|---|---|
-| `khoa.nm` | Nhân viên; người duyệt phòng Kỳ Hà / Núi Thành / Tam Hiệp; có ủy quyền mặc định cho Lê Văn Nam |
-| `ha.tt` | Trưởng ban, duyệt cấp 1 phòng Chu Lai 1; ủy quyền mặc định cho Khoa |
-| `nam.lv`, `anh.ph` | Duyệt cấp 2 phòng Chu Lai 1 |
-| `nhung.vh` | **Lễ tân** (thấy mục "Lễ tân bưu phẩm") |
-| `lan.nt`, `tung.bt`, `bao.pq` | Nhân viên, người đặt phòng |
-| `admin` | Administrator |
-
-Dữ liệu mock nằm trong bộ nhớ, khởi động lại `mock:api` là về trạng thái ban đầu (và các phiên đăng nhập cũ hết hiệu lực).
 
 ### iOS
 
@@ -95,10 +79,10 @@ Không có Xcode thì build trên cloud bằng EAS Build (`npx eas-cli@latest bu
 npm run typecheck
 npm run lint
 npm test           # Jest (jest-expo): src/**/__tests__
-npm run e2e        # Maestro, cần mock:api + Metro + app đã cài trên emulator
+npm run e2e        # Maestro, cần Metro + app đã cài trên emulator
 ```
 
-Các luồng e2e trong `.maestro/` chạy theo thứ tự: đặt phòng (lan.nt) → duyệt (khoa.nm) → tiếp nhận bưu phẩm → bàn giao (nhung.vh). Chúng dựa trên dữ liệu mock.
+Các luồng e2e trong `.maestro/` chạy theo thứ tự: đặt phòng (lan.nt) → duyệt (khoa.nm) → tiếp nhận bưu phẩm → bàn giao (nhung.vh). Chúng được viết theo dữ liệu của mock API cũ (đã gỡ): tài khoản lan.nt / khoa.nm / nhung.vh, mật khẩu `123456`, phòng Tam Hiệp…, nên cần tài khoản và dữ liệu tương ứng trên back-end thật mới chạy được.
 
 ## Cấu trúc
 
@@ -112,7 +96,6 @@ src/core/                 Hạ tầng: api (2 client + refresh token), session, 
                           errors (errorCode → câu tiếng Việt), i18n, theme, time (giờ VN)
 src/shared/ui/            Design system dùng chung: ScreenShell, HeaderBar, Header*, Card, StatusBadge, BottomSheet… (xem `/ui` trong bản dev)
 src/features/*            Màn hình + logic nghiệp vụ theo mảng
-tools/mock-api/           Mock không phụ thuộc thư viện của cả hai back-end
 .maestro/                 Luồng e2e
 ```
 
@@ -134,4 +117,4 @@ Phát hiện khi đọc mã nguồn back-end, app đang làm vòng qua:
 - `DelegationDto` không có `pendingEndDate` (chỉ `RelatedDelegation` có), nên danh sách ủy quyền không hiện được "Chờ xác nhận gia hạn đến …".
 - `BookingDto.approvalHistory` luôn rỗng; app đọc lịch sử duyệt từ `GET /api/bookingapprovals/booking/{id}`.
 - `my-approvals` gộp theo nhóm và không trả cấp duyệt (`approvalStep` null).
-- Chưa kiểm chứng: tìm người dùng (`GET /api/users?searchKeyword=`) có bỏ dấu không. Mock hiện phân biệt dấu ("nguyen" không ra "Nguyễn").
+- Chưa kiểm chứng: tìm người dùng (`GET /api/users?searchKeyword=`) có bỏ dấu không.

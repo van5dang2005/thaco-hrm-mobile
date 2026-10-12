@@ -10,9 +10,9 @@ function trimSlash(url: string) {
  */
 export const env = {
   /** Origin of thaco_be_ql_buu_pham (no trailing /api). */
-  parcelApiUrl: trimSlash(process.env.EXPO_PUBLIC_PARCEL_API_URL ?? 'http://localhost:4001'),
+  parcelApiUrl: trimSlash(process.env.EXPO_PUBLIC_PARCEL_API_URL ?? 'http://localhost:5211'),
   /** Origin of thaco_be_ql_phong_hop (no trailing /api). */
-  roomApiUrl: trimSlash(process.env.EXPO_PUBLIC_ROOM_API_URL ?? 'http://localhost:4002'),
+  roomApiUrl: trimSlash(process.env.EXPO_PUBLIC_ROOM_API_URL ?? 'http://localhost:5113'),
   /** Deep link that opens THACO Paytime; falls back to the store URL when it cannot be opened. */
   paytimeUrl: process.env.EXPO_PUBLIC_PAYTIME_URL ?? 'thacopaytime://',
   paytimeIosStoreUrl: process.env.EXPO_PUBLIC_PAYTIME_IOS_STORE_URL ?? 'https://apps.apple.com/vn/search?term=THACO%20Paytime',
