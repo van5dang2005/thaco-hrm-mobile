@@ -282,7 +282,6 @@ const vi = {
       freeRooms: 'Phòng trống',
       now: 'Bây giờ',
       roomsTotal: '/{{total}} phòng',
-      otherUtilities: 'Tiện ích khác',
     },
     orderSheet: {
       title: 'Sắp xếp tiện ích',

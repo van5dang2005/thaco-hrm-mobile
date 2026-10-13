@@ -282,7 +282,6 @@ const en: Translation = {
       freeRooms: 'Free rooms',
       now: 'Now',
       roomsTotal: '/{{total}} rooms',
-      otherUtilities: 'Other services',
     },
     orderSheet: {
       title: 'Arrange services',

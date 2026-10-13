@@ -19,20 +19,17 @@ import type { HomeModule } from '../modules';
 import { pickNextMeeting, useFreeRooms, useTodayMeetings, useTodoItems } from '../signals';
 import { todoTones, useVisibleTodos } from '../TodoTiles';
 import { useModuleLabel } from '../useModules';
-import { chunk, type LayoutProps, ModuleIcon, RowPadding, useGroupTone, useTileA11yLabel } from './shared';
+import { chunk, type LayoutProps, ModuleIcon, RowPadding, SectionHeader, TileMarker, useGroupTone, useTileA11yLabel } from './shared';
 
-/** Meeting modules summed up by the today / free-rooms cards (and the hero's "Đặt phòng"). */
-const meetingWidgetModules = ['book-room', 'room-calendar', 'my-meetings'];
-
-/** "Thẻ" (2g): to-do card (left, two rows tall), today's meetings and free rooms (right), then the other services as 2-column cards. */
-export function CardLayout({ modules, signals, onOpen, showTodo }: LayoutProps) {
+/**
+ * "Thẻ" (2g): to-do card (left, two rows tall), today's meetings and free rooms (right), then every service as a
+ * 2-column card with its summary, in the user's order ("Tùy chỉnh" arranges them, as in "Lưới").
+ */
+export function CardLayout({ modules, signals, onOpen, showTodo, onCustomize }: LayoutProps) {
   const { t } = useTranslation();
   const todos = useVisibleTodos(modules);
   const rooms = modules.some((m) => m.permission?.service === 'room');
   const left = showTodo && todos.length ? <TodoCard todos={todos} onOpen={onOpen} /> : null;
-  // "Tiện ích khác" lists what the cards on top do not open: the to-do modules come back with the to-do card off.
-  const covered = new Set([...(rooms ? meetingWidgetModules : []), ...(left ? todos.map(({ module }) => module.id) : [])]);
-  const others = modules.filter((m) => !covered.has(m.id));
   const right = rooms ? [<TodayCard key="today" />, <FreeRoomsCard key="free" />] : [];
 
   return (
@@ -48,21 +45,17 @@ export function CardLayout({ modules, signals, onOpen, showTodo }: LayoutProps) 
         )
       ) : null}
 
-      {others.length ? (
-        <View className="gap-2.5">
-          <Text weight="bold" accessibilityRole="header" className="px-1 text-muted" style={{ fontSize: 11.5, lineHeight: 15, letterSpacing: 0.8, textTransform: 'uppercase' }}>
-            {t('home.cards.otherUtilities')}
-          </Text>
-          {chunk(others, 2).map((row, index) => (
-            <View key={index} className="flex-row gap-2.5">
-              {row.map((module) => (
-                <ModuleCard key={module.id} module={module} summary={signals[module.id]?.summary} count={signals[module.id]?.badge?.data} onOpen={onOpen} />
-              ))}
-              <RowPadding count={2 - row.length} />
-            </View>
-          ))}
-        </View>
-      ) : null}
+      <View className="gap-2.5">
+        <SectionHeader testID="home-customize" title={t('home.utilities')} action={t('home.customize')} onAction={onCustomize} />
+        {chunk(modules, 2).map((row, index) => (
+          <View key={index} className="flex-row gap-2.5">
+            {row.map((module) => (
+              <ModuleCard key={module.id} module={module} summary={signals[module.id]?.summary} count={signals[module.id]?.badge?.data} onOpen={onOpen} />
+            ))}
+            <RowPadding count={2 - row.length} />
+          </View>
+        ))}
+      </View>
     </View>
   );
 }
@@ -227,7 +220,10 @@ function FreeRoomsCard() {
   );
 }
 
-/** Horizontal service card: tinted 36pt icon box, label, one-line summary (portal description for web apps), ↗ for other apps. */
+/**
+ * Horizontal service card: tinted 36pt icon box with its red count, label, one-line summary (portal description for
+ * web apps), ↗ for other apps. A non-zero count on an `urgentWhenBadged` module turns the border and summary red.
+ */
 function ModuleCard({ module, summary, count, onOpen }: { module: HomeModule; summary?: { data?: string; isLoading: boolean }; count?: number; onOpen: (m: HomeModule) => void }) {
   const tone = useGroupTone(module.group);
   const label = useModuleLabel();
@@ -236,6 +232,7 @@ function ModuleCard({ module, summary, count, onOpen }: { module: HomeModule; su
   const { t } = useTranslation();
   // Portal apps have no summary hook: their description, else where they open.
   const note = summary?.data ?? (summary?.isLoading ? undefined : module.description ?? (module.externalUrl ? t('home.summary.webApp') : undefined));
+  const urgent = !!count && !!module.urgentWhenBadged;
   return (
     <Pressable
       testID={`home-module-${module.id}`}
@@ -243,17 +240,18 @@ function ModuleCard({ module, summary, count, onOpen }: { module: HomeModule; su
       accessibilityLabel={a11y(module, label(module), count, note)}
       onPress={() => onOpen(module)}
       className="min-h-[58px] min-w-0 flex-1 flex-row items-center gap-2.5 rounded-[16px] bg-elevated px-3 py-2.5 active:opacity-80"
-      style={shadows.card}
+      style={[shadows.card, urgent ? { borderWidth: 1.5, borderColor: colors['danger-border'] } : null]}
     >
       <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={tone.box}>
         <ModuleIcon module={module} size={18} color={tone.icon} />
+        {module.externalUrl ? null : <TileMarker module={module} count={count} className="-right-2 -top-2" />}
       </View>
       <View className="min-w-0 flex-1">
         <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 13.5, lineHeight: 18 }}>
           {label(module, true)}
         </Text>
         {note ? (
-          <Text numberOfLines={1} className="text-muted" style={{ fontSize: 11.5, lineHeight: 15 }}>
+          <Text numberOfLines={1} weight={urgent ? 'semibold' : undefined} className={urgent ? 'text-danger-text' : 'text-muted'} style={{ fontSize: 11.5, lineHeight: 15 }}>
             {note}
           </Text>
         ) : summary?.isLoading ? (
