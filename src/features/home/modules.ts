@@ -45,8 +45,15 @@ type ModuleLabel =
       /** Shorter label for the 4-column "Theo nhóm" layout. */
       shortLabelKey?: ModuleLabelKey;
       title?: never;
+      shortTitle?: never;
     }
-  | { title: string; labelKey?: never; shortLabelKey?: never };
+  | {
+      title: string;
+      /** `title` without the "Phần mềm" / "PM" lead, for the 4-column grids. */
+      shortTitle?: string;
+      labelKey?: never;
+      shortLabelKey?: never;
+    };
 
 export type HomeModule = ModuleLabel & {
   id: string;
@@ -54,6 +61,8 @@ export type HomeModule = ModuleLabel & {
   icon: AppIcon;
   /** Portal image (`MyApp.icon`), shown instead of `icon` unless it fails to load. */
   iconUrl?: string;
+  /** Portal description (`MyApp.description`): the "Thẻ" layout's second line for an app without a `summary`. */
+  description?: string;
   /** Screen inside the app. */
   route?: Href;
   /** Runs before navigating to `route` (e.g. start a fresh booking draft). */

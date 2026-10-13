@@ -25,16 +25,20 @@ export type LayoutProps = {
   onCustomize: () => void;
 };
 
-/** Icon box / glyph / deep text colors per group: meeting blue, parcel green (v3); neutral for web apps, which bring their own icon. */
+/**
+ * Icon box / glyph / deep text colors per group: meeting blue, parcel green (v3). Web apps bring their own logo,
+ * mostly on white: a white box with a hairline frames it instead of a tint around a white patch.
+ */
 export function useGroupTone(group: ModuleGroup) {
   const { colors, scheme } = useTheme();
+  const tinted = (box: string) => ({ backgroundColor: box });
   switch (group) {
     case 'meeting':
-      return { box: colors['primary-tint'], icon: colors['primary-tint-text'], bar: colors.primary };
+      return { box: tinted(colors['primary-tint']), icon: colors['primary-tint-text'], bar: colors.primary };
     case 'parcel':
-      return { box: colors['success-tint'], icon: scheme === 'dark' ? colors['success-text'] : colors.success, bar: colors.success };
+      return { box: tinted(colors['success-tint']), icon: scheme === 'dark' ? colors['success-text'] : colors.success, bar: colors.success };
     case 'other':
-      return { box: colors['off-tint'], icon: colors['ink-2'], bar: colors.subtle };
+      return { box: { backgroundColor: colors.elevated, borderWidth: 1, borderColor: colors.line }, icon: colors['ink-2'], bar: colors.subtle };
   }
 }
 
@@ -97,7 +101,7 @@ export function ModuleTile({ module, count, onOpen }: { module: HomeModule; coun
       onPress={() => onOpen(module)}
       className="min-h-[44px] min-w-0 flex-1 items-center gap-2 active:opacity-70"
     >
-      <View className="h-[50px] w-[50px] items-center justify-center rounded-[16px]" style={{ backgroundColor: tone.box }}>
+      <View className="h-[50px] w-[50px] items-center justify-center rounded-[16px]" style={tone.box}>
         <ModuleIcon module={module} size={22} color={tone.icon} />
         <TileMarker module={module} count={count} className="-right-1.5 -top-1.5" />
       </View>

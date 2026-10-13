@@ -25,16 +25,28 @@ export function filterModules<M extends Pick<HomeModule, 'permission'>>(modules:
 /** The device can open it: it names a scheme (`https:`, `thacopaytime:`…), unlike a path relative to the portal. */
 const OPENABLE_URL = /^[a-z][a-z\d+.-]*:/i;
 
+/** Portal names lead with the kind of thing ("Phần mềm Quản lý bưu phẩm", "PM Văn Thư"). */
+const SOFTWARE_LEAD = /^(phần\s+mềm|pm)\s+/i;
+
+/** `name` without its "Phần mềm" / "PM" lead, first letter raised: "Văn Thư"; `name` itself when nothing is left. */
+export function shortAppName(name: string) {
+  const short = name.replace(SOFTWARE_LEAD, '').trim();
+  return short ? short.charAt(0).toUpperCase() + short.slice(1) : name;
+}
+
 /** Tile of a granted app without screens here: its web app (`url`) under the portal's name and icon; `null` with nothing to open. */
 export function webModule(app: MyApp): HomeModule | null {
   const url = app.url?.trim();
   if (!url || !OPENABLE_URL.test(url)) return null;
+  const title = app.name?.trim() || app.code;
   return {
     id: `app:${app.code}`,
     group: 'other',
-    title: app.name?.trim() || app.code,
+    title,
+    shortTitle: shortAppName(title),
     icon: AppWindowIcon,
     iconUrl: app.icon?.trim() || undefined,
+    description: app.description?.trim() || undefined,
     externalUrl: url,
   };
 }

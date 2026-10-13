@@ -84,7 +84,7 @@ function OrderRow({ module, first, last, onMove }: { module: HomeModule; first: 
   const name = label(module);
   return (
     <View testID={`home-order-${module.id}`} className="min-h-[48px] flex-row items-center gap-3">
-      <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={{ backgroundColor: tone.box }}>
+      <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={tone.box}>
         <ModuleIcon module={module} size={18} color={tone.icon} />
       </View>
       <Text weight="medium" numberOfLines={1} className="flex-1 text-ink" style={{ fontSize: 14, lineHeight: 19 }}>

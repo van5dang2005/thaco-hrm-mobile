@@ -11,12 +11,15 @@ import { SwitchRow } from '@/shared/ui/SwitchRow';
 import { Text } from '@/shared/ui/Text';
 
 import { type HomeLayout, homeLayouts, useEffectiveHomePrefs, useHomePrefs } from './prefs';
+import { useVisibleTodos } from './TodoTiles';
+import { useAvailableModules } from './useModules';
 
 type Props = { visible: boolean; onClose: () => void; /** "Sắp xếp tiện ích" (hidden when absent). */ onSort?: () => void };
 
 /**
  * "Giao diện trang chủ" (2h). Choices are kept as a draft that the home screen previews behind the
- * sheet; "Áp dụng" saves them, closing any other way discards them.
+ * sheet; "Áp dụng" saves them, closing any other way discards them. A switch shows only when the granted apps
+ * give it something to show: "Cần xử lý" needs Duyệt or Bưu phẩm, the next meeting needs the room service.
  */
 export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
   const { t } = useTranslation();
@@ -25,6 +28,9 @@ export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
   const updateDraft = useHomePrefs((s) => s.updateDraft);
   const applyDraft = useHomePrefs((s) => s.applyDraft);
   const discardDraft = useHomePrefs((s) => s.discardDraft);
+  const modules = useAvailableModules();
+  const todoAvailable = useVisibleTodos(modules).length > 0;
+  const meetingAvailable = modules.some((m) => m.permission?.service === 'room');
 
   useEffect(() => {
     if (!visible) return;
@@ -66,23 +72,27 @@ export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
         ))}
       </View>
       <View>
-        <SwitchRow
-          testID="home-layout-show-todo"
-          label={t('home.layoutSheet.showTodo')}
-          hint={t('home.layoutSheet.showTodoHint')}
-          value={showTodo}
-          onChange={(value) => updateDraft({ showTodo: value })}
-          className="py-1.5"
-        />
-        <View className="h-px bg-line-2" />
-        <SwitchRow
-          testID="home-layout-show-next-meeting"
-          label={t('home.layoutSheet.showNextMeeting')}
-          hint={t('home.layoutSheet.showNextMeetingHint')}
-          value={showNextMeeting}
-          onChange={(value) => updateDraft({ showNextMeeting: value })}
-          className="py-1.5"
-        />
+        {todoAvailable ? (
+          <SwitchRow
+            testID="home-layout-show-todo"
+            label={t('home.layoutSheet.showTodo')}
+            hint={t('home.layoutSheet.showTodoHint')}
+            value={showTodo}
+            onChange={(value) => updateDraft({ showTodo: value })}
+            className="py-1.5"
+          />
+        ) : null}
+        {todoAvailable && meetingAvailable ? <View className="h-px bg-line-2" /> : null}
+        {meetingAvailable ? (
+          <SwitchRow
+            testID="home-layout-show-next-meeting"
+            label={t('home.layoutSheet.showNextMeeting')}
+            hint={t('home.layoutSheet.showNextMeetingHint')}
+            value={showNextMeeting}
+            onChange={(value) => updateDraft({ showNextMeeting: value })}
+            className="py-1.5"
+          />
+        ) : null}
       </View>
     </BottomSheet>
   );

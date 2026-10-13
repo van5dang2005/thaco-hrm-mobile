@@ -44,7 +44,7 @@ export function useModuleSignals(): ModuleSignals {
 export function useModuleLabel() {
   const { t } = useTranslation();
   return (module: HomeModule, short = false) => {
-    if (module.title !== undefined) return module.title;
+    if (module.title !== undefined) return (short && module.shortTitle) || module.title;
     return t(`home.modules.${short && module.shortLabelKey ? module.shortLabelKey : module.labelKey}`);
   };
 }

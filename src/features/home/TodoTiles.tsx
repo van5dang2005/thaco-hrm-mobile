@@ -28,7 +28,7 @@ export function useVisibleTodos(modules: HomeModule[]) {
   });
 }
 
-/** "Cần xử lý" (2c): equal tinted tiles — Chờ duyệt, Bưu phẩm. */
+/** "Cần xử lý" (2c): equal tinted tiles — Chờ duyệt, Bưu phẩm; a single one (the other app not granted) is a wide row. */
 export function TodoTiles({ modules, onOpen }: { modules: HomeModule[]; onOpen: (module: HomeModule) => void }) {
   const { t } = useTranslation();
   const visible = useVisibleTodos(modules);
@@ -36,16 +36,20 @@ export function TodoTiles({ modules, onOpen }: { modules: HomeModule[]; onOpen: 
   return (
     <View testID="home-todo" className="gap-2.5">
       <SectionHeader title={t('home.todo.title')} />
-      <View className="flex-row gap-2">
-        {visible.map(({ kind, module }) => (
-          <TodoTile key={kind} kind={kind} onPress={() => onOpen(module)} />
-        ))}
-      </View>
+      {visible.length === 1 ? (
+        <TodoTile kind={visible[0].kind} wide onPress={() => onOpen(visible[0].module)} />
+      ) : (
+        <View className="flex-row gap-2">
+          {visible.map(({ kind, module }) => (
+            <TodoTile key={kind} kind={kind} onPress={() => onOpen(module)} />
+          ))}
+        </View>
+      )}
     </View>
   );
 }
 
-function TodoTile({ kind, onPress }: { kind: TodoKind; onPress: () => void }) {
+function TodoTile({ kind, wide, onPress }: { kind: TodoKind; wide?: boolean; onPress: () => void }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const item = useTodoItems()[kind];
@@ -53,36 +57,62 @@ function TodoTile({ kind, onPress }: { kind: TodoKind; onPress: () => void }) {
   const deep = colors[tone.deep];
   const label = t(`home.todo.${kind}`);
 
+  const count =
+    item.count === undefined && item.isLoading ? (
+      <Skeleton width={28} height={26} radius={6} />
+    ) : (
+      <Text mono weight="bold" maxFontSizeMultiplier={1.15} style={{ fontSize: 26, lineHeight: 31, color: deep }}>
+        {String(item.count ?? 0)}
+      </Text>
+    );
+  const iconDisc = (
+    <View className={wide ? 'h-10 w-10 items-center justify-center rounded-full bg-elevated' : 'h-8 w-8 items-center justify-center rounded-full bg-elevated'}>
+      <Icon icon={tone.icon} size={wide ? 18 : 16} rawColor={colors[tone.solid]} />
+    </View>
+  );
+  const sub = (
+    <Text numberOfLines={1} style={{ fontSize: 11, lineHeight: 14, color: deep }}>
+      {item.sub ?? ' '}
+    </Text>
+  );
+
   return (
     <Pressable
       testID={`home-todo-${kind}`}
       accessibilityRole="button"
       accessibilityLabel={[label, item.count ?? '', item.sub].filter((v) => v !== '').join(', ')}
       onPress={onPress}
-      className="min-w-0 flex-1 gap-2.5 rounded-[18px] p-3 active:opacity-80"
+      className={wide ? 'min-h-[64px] flex-row items-center gap-3 rounded-[18px] px-3.5 py-3 active:opacity-80' : 'min-w-0 flex-1 gap-2.5 rounded-[18px] p-3 active:opacity-80'}
       style={{ backgroundColor: colors[tone.tint] }}
     >
-      <View className="flex-row items-start justify-between">
-        <View className="h-8 w-8 items-center justify-center rounded-full bg-elevated">
-          <Icon icon={tone.icon} size={16} rawColor={colors[tone.solid]} />
-        </View>
-        <Icon icon={ArrowUpRightIcon} size={14} weight="bold" rawColor={deep} />
-      </View>
-      <View>
-        {item.count === undefined && item.isLoading ? (
-          <Skeleton width={28} height={26} radius={6} />
-        ) : (
-          <Text mono weight="bold" maxFontSizeMultiplier={1.15} style={{ fontSize: 26, lineHeight: 31, color: deep }}>
-            {String(item.count ?? 0)}
-          </Text>
-        )}
-        <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 12.5, lineHeight: 17 }}>
-          {label}
-        </Text>
-        <Text numberOfLines={1} style={{ fontSize: 11, lineHeight: 14, color: deep }}>
-          {item.sub ?? ' '}
-        </Text>
-      </View>
+      {wide ? (
+        // Icon, label over its second line, then the count and ↗ on the right.
+        <>
+          {iconDisc}
+          <View className="min-w-0 flex-1">
+            <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 13.5, lineHeight: 18 }}>
+              {label}
+            </Text>
+            {sub}
+          </View>
+          {count}
+          <Icon icon={ArrowUpRightIcon} size={14} weight="bold" rawColor={deep} />
+        </>
+      ) : (
+        <>
+          <View className="flex-row items-start justify-between">
+            {iconDisc}
+            <Icon icon={ArrowUpRightIcon} size={14} weight="bold" rawColor={deep} />
+          </View>
+          <View>
+            {count}
+            <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 12.5, lineHeight: 17 }}>
+              {label}
+            </Text>
+            {sub}
+          </View>
+        </>
+      )}
     </Pressable>
   );
 }

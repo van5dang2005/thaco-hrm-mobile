@@ -350,7 +350,7 @@ const en: Translation = {
       reception: 'Receive, hand over',
       receptionWaiting: 'To hand over: {{count}}',
       receptionNone: 'Nothing waiting',
-      paytime: 'Open Paytime',
+      webApp: 'Opens in the browser',
     },
     layoutSheet: {
       title: 'Home layout',

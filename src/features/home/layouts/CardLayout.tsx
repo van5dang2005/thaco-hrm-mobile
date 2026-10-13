@@ -21,16 +21,18 @@ import { todoTones, useVisibleTodos } from '../TodoTiles';
 import { useModuleLabel } from '../useModules';
 import { chunk, type LayoutProps, ModuleIcon, RowPadding, useGroupTone, useTileA11yLabel } from './shared';
 
-/** Modules already summed up by the widgets on top; "Tiện ích khác" lists the rest. */
-const widgetModules = new Set(['approve-rooms', 'parcels', 'book-room', 'room-calendar', 'my-meetings']);
+/** Meeting modules summed up by the today / free-rooms cards (and the hero's "Đặt phòng"). */
+const meetingWidgetModules = ['book-room', 'room-calendar', 'my-meetings'];
 
 /** "Thẻ" (2g): to-do card (left, two rows tall), today's meetings and free rooms (right), then the other services as 2-column cards. */
 export function CardLayout({ modules, signals, onOpen, showTodo }: LayoutProps) {
   const { t } = useTranslation();
   const todos = useVisibleTodos(modules);
   const rooms = modules.some((m) => m.permission?.service === 'room');
-  const others = modules.filter((m) => !widgetModules.has(m.id));
   const left = showTodo && todos.length ? <TodoCard todos={todos} onOpen={onOpen} /> : null;
+  // "Tiện ích khác" lists what the cards on top do not open: the to-do modules come back with the to-do card off.
+  const covered = new Set([...(rooms ? meetingWidgetModules : []), ...(left ? todos.map(({ module }) => module.id) : [])]);
+  const others = modules.filter((m) => !covered.has(m.id));
   const right = rooms ? [<TodayCard key="today" />, <FreeRoomsCard key="free" />] : [];
 
   return (
@@ -225,31 +227,34 @@ function FreeRoomsCard() {
   );
 }
 
-/** Horizontal service card: tinted 36pt icon box, label, one-line summary, ↗ for other apps. */
+/** Horizontal service card: tinted 36pt icon box, label, one-line summary (portal description for web apps), ↗ for other apps. */
 function ModuleCard({ module, summary, count, onOpen }: { module: HomeModule; summary?: { data?: string; isLoading: boolean }; count?: number; onOpen: (m: HomeModule) => void }) {
   const tone = useGroupTone(module.group);
   const label = useModuleLabel();
   const a11y = useTileA11yLabel();
   const { colors } = useTheme();
+  const { t } = useTranslation();
+  // Portal apps have no summary hook: their description, else where they open.
+  const note = summary?.data ?? (summary?.isLoading ? undefined : module.description ?? (module.externalUrl ? t('home.summary.webApp') : undefined));
   return (
     <Pressable
       testID={`home-module-${module.id}`}
       accessibilityRole="button"
-      accessibilityLabel={a11y(module, label(module), count, summary?.data)}
+      accessibilityLabel={a11y(module, label(module), count, note)}
       onPress={() => onOpen(module)}
       className="min-h-[58px] min-w-0 flex-1 flex-row items-center gap-2.5 rounded-[16px] bg-elevated px-3 py-2.5 active:opacity-80"
       style={shadows.card}
     >
-      <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={{ backgroundColor: tone.box }}>
+      <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={tone.box}>
         <ModuleIcon module={module} size={18} color={tone.icon} />
       </View>
       <View className="min-w-0 flex-1">
         <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 13.5, lineHeight: 18 }}>
           {label(module, true)}
         </Text>
-        {summary?.data ? (
+        {note ? (
           <Text numberOfLines={1} className="text-muted" style={{ fontSize: 11.5, lineHeight: 15 }}>
-            {summary.data}
+            {note}
           </Text>
         ) : summary?.isLoading ? (
           <Skeleton width="70%" height={10} radius={4} />

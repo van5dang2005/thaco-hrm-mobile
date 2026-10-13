@@ -350,7 +350,7 @@ const vi = {
       reception: 'Tiếp nhận, bàn giao',
       receptionWaiting: '{{count}} chờ bàn giao',
       receptionNone: 'Không có bưu phẩm chờ',
-      paytime: 'Mở app Paytime',
+      webApp: 'Mở trên trình duyệt',
     },
     layoutSheet: {
       title: 'Giao diện trang chủ',
