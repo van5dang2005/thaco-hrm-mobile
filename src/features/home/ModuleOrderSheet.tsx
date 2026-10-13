@@ -8,10 +8,10 @@ import { Icon } from '@/shared/ui/Icon';
 import { type AppIcon, ArrowDownIcon, ArrowUpIcon, ListOrderedIcon } from '@/shared/ui/icons';
 import { Text } from '@/shared/ui/Text';
 
-import { useGroupTone } from './layouts/shared';
-import { homeModules, type HomeModule } from './modules';
-import { useHomePrefs } from './prefs';
-import { useHomeModules, useModuleLabel } from './useModules';
+import { ModuleIcon, useGroupTone } from './layouts/shared';
+import type { HomeModule } from './modules';
+import { orderModules, useHomePrefs } from './prefs';
+import { useAvailableModules, useModuleLabel } from './useModules';
 
 type Props = { visible: boolean; onClose: () => void };
 
@@ -27,8 +27,10 @@ export function moveItem<T>(items: readonly T[], index: number, delta: number): 
 /** "Sắp xếp tiện ích": the visible services in order, each with ↑ / ↓. Saved with "Xong". */
 export function ModuleOrderSheet({ visible, onClose }: Props) {
   const { t } = useTranslation();
-  const modules = useHomeModules();
+  const available = useAvailableModules();
+  const order = useHomePrefs((s) => s.order);
   const setOrder = useHomePrefs((s) => s.setOrder);
+  const modules = orderModules(available, order);
   const [ids, setIds] = useState<string[]>([]);
 
   // Start from the current order every time the sheet opens.
@@ -57,7 +59,7 @@ export function ModuleOrderSheet({ visible, onClose }: Props) {
       scrollable
       footer={
         <View className="flex-row gap-2.5">
-          <Button testID="home-order-reset" className="flex-1" variant="soft" size="lg" label={t('home.orderSheet.reset')} onPress={() => setIds(homeModules.filter((m) => byId.has(m.id)).map((m) => m.id))} />
+          <Button testID="home-order-reset" className="flex-1" variant="soft" size="lg" label={t('home.orderSheet.reset')} onPress={() => setIds(available.map((m) => m.id))} />
           <Button testID="home-order-done" className="flex-[1.4]" size="lg" label={t('home.orderSheet.done')} onPress={done} />
         </View>
       }
@@ -83,7 +85,7 @@ function OrderRow({ module, first, last, onMove }: { module: HomeModule; first: 
   return (
     <View testID={`home-order-${module.id}`} className="min-h-[48px] flex-row items-center gap-3">
       <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={{ backgroundColor: tone.box }}>
-        <Icon icon={module.icon} size={18} rawColor={tone.icon} />
+        <ModuleIcon module={module} size={18} color={tone.icon} />
       </View>
       <Text weight="medium" numberOfLines={1} className="flex-1 text-ink" style={{ fontSize: 14, lineHeight: 19 }}>
         {name}

@@ -8,7 +8,10 @@ import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { services } from '@/core/api/clients';
 import { qk } from '@/core/query/keys';
+import { refreshMyApps } from '@/core/session/session';
+import { useSessionStore } from '@/core/session/sessionStore';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { useTotalUnread } from '@/features/notification/api';
 import { images, WORDMARK_RATIO } from '@/shared/assets';
@@ -16,6 +19,7 @@ import { CountBadge } from '@/shared/ui/CountBadge';
 import { Icon } from '@/shared/ui/Icon';
 import { type AppIcon, BellIcon, LayoutGridIcon } from '@/shared/ui/icons';
 import { shadows } from '@/shared/ui/shadows';
+import { EmptyState } from '@/shared/ui/StateViews';
 
 import { HeroCard } from './HeroCard';
 import { HomeLayoutSheet } from './HomeLayoutSheet';
@@ -35,8 +39,8 @@ const layoutComponents: Record<HomeLayout, ComponentType<LayoutProps>> = {
 
 const FADE_MS = 200;
 
-/** Query groups behind the profile, badges and summaries (pull-to-refresh). */
-const refreshKeys = [qk.me('parcel'), qk.me('room'), qk.notifications.root, qk.approvals.root, qk.bookings.root, qk.rooms.root, qk.parcels.root, qk.delegations.root];
+/** Query groups behind the profile, badges and summaries (pull-to-refresh, with the granted apps). */
+const refreshKeys = [...services.map((service) => qk.me(service)), qk.notifications.root, qk.approvals.root, qk.bookings.root, qk.rooms.root, qk.parcels.root, qk.delegations.root];
 
 /** Home (2c / 2f / 2g): wordmark pill + bell + layout button, the blue greeting card, then the chosen layout. */
 export function HomeScreen() {
@@ -45,6 +49,7 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const unread = useTotalUnread();
+  const appsKnown = useSessionStore((s) => s.apps !== null);
   const modules = useHomeModules();
   const signals = useModuleSignals();
   const open = useOpenModule();
@@ -64,7 +69,7 @@ export function HomeScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all(refreshKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
+    await Promise.all([refreshMyApps(), ...refreshKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey }))]);
     setRefreshing(false);
   };
 
@@ -94,9 +99,14 @@ export function HomeScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.muted} colors={[colors.primary]} />}
       >
         <HeroCard showNextMeeting={showNextMeeting && roomVisible} onBook={bookRoom ? () => open(bookRoom) : undefined} />
-        <Animated.View key={layout} entering={FadeIn.duration(FADE_MS)}>
-          <Layout modules={modules} signals={signals} onOpen={open} showTodo={showTodo} onCustomize={() => setOrderSheet(true)} />
-        </Animated.View>
+        {modules.length ? (
+          <Animated.View key={layout} entering={FadeIn.duration(FADE_MS)}>
+            <Layout modules={modules} signals={signals} onOpen={open} showTodo={showTodo} onCustomize={() => setOrderSheet(true)} />
+          </Animated.View>
+        ) : (
+          // Tiles come from the apps the portal grants: none granted, or the list could not be read.
+          <EmptyState testID="home-no-modules" icon={LayoutGridIcon} message={t(appsKnown ? 'home.noModules' : 'home.appsUnavailable')} />
+        )}
       </ScrollView>
 
       <HomeLayoutSheet visible={layoutSheet} onClose={() => setLayoutSheet(false)} onSort={() => setOrderSheet(true)} />

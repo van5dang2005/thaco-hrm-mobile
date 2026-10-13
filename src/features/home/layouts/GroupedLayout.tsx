@@ -5,15 +5,15 @@ import { Card } from '@/shared/ui/Card';
 import { Text } from '@/shared/ui/Text';
 
 import { groupModules } from '../moduleFilter';
-import { groupOrder, type ModuleGroup } from '../modules';
+import type { ModuleGroup } from '../modules';
 import { type LayoutProps, ModuleGrid, useGroupTone } from './shared';
 
-/** "Theo nhóm" (2f): one white card per group (Phòng họp, Bưu phẩm, Nhân sự), a 4×14 colored mark before the title, 4 columns. */
+/** "Theo nhóm" (2f): one white card per group (Phòng họp, Bưu phẩm, Ứng dụng khác), a 4×14 colored mark before the title, 4 columns. */
 export function GroupedLayout({ modules, signals, onOpen }: LayoutProps) {
   const { t } = useTranslation();
   return (
     <View className="gap-3">
-      {groupModules(modules, groupOrder).map(({ group, modules: items }) => {
+      {groupModules(modules).map(({ group, modules: items }) => {
         const todo = items.reduce((sum, m) => sum + (signals[m.id]?.badge?.data ?? 0), 0);
         return (
           <Card key={group} testID={`home-group-${group}`} className="gap-3.5 overflow-visible px-2 pb-4 pt-3.5">

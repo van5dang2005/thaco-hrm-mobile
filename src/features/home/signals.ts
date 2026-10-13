@@ -22,15 +22,6 @@ import { useHomePrefs } from './prefs';
 /** What a badge / summary hook returns: the slice of a query result the layouts read. */
 export type Signal<T> = Pick<UseQueryResult<T>, 'data' | 'isLoading'>;
 
-type SummaryKey = 'directory' | 'comingSoon' | 'paytime' | 'bookRoom';
-
-/** A fixed second line for the card layout. */
-export const staticSummary = (key: SummaryKey) =>
-  function useStaticSummary(): Signal<string> {
-    const { t } = useTranslation();
-    return { data: t(`home.summary.${key}`), isLoading: false };
-  };
-
 /** Summaries that cost extra requests only run while the card layout is on screen (or previewed). */
 function useCardsVisible() {
   return useHomePrefs((s) => (s.draft?.layout ?? s.layout) === 'cards');

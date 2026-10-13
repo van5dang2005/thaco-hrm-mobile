@@ -1,3 +1,5 @@
+import { Image } from 'expo-image';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -23,7 +25,7 @@ export type LayoutProps = {
   onCustomize: () => void;
 };
 
-/** Icon box / glyph / deep text colors per group: meeting blue, parcel green, HR amber (v3). */
+/** Icon box / glyph / deep text colors per group: meeting blue, parcel green (v3); neutral for web apps, which bring their own icon. */
 export function useGroupTone(group: ModuleGroup) {
   const { colors, scheme } = useTheme();
   switch (group) {
@@ -31,9 +33,20 @@ export function useGroupTone(group: ModuleGroup) {
       return { box: colors['primary-tint'], icon: colors['primary-tint-text'], bar: colors.primary };
     case 'parcel':
       return { box: colors['success-tint'], icon: scheme === 'dark' ? colors['success-text'] : colors.success, bar: colors.success };
-    case 'hr':
-      return { box: colors['warning-tint'], icon: colors.warning, bar: colors.warning };
+    case 'other':
+      return { box: colors['off-tint'], icon: colors['ink-2'], bar: colors.subtle };
   }
+}
+
+/** A module's glyph at `size`: the portal image of a web app (a little larger, logos carry their own margin), else its lucide icon. */
+export function ModuleIcon({ module, size, color }: { module: HomeModule; size: number; color: string }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const url = module.iconUrl;
+  if (url && url !== failedUrl) {
+    const side = Math.round(size * 1.35);
+    return <Image source={{ uri: url }} style={{ width: side, height: side }} contentFit="contain" transition={120} onError={() => setFailedUrl(url)} accessibilityIgnoresInvertColors />;
+  }
+  return <Icon icon={module.icon} size={size} rawColor={color} />;
 }
 
 export function chunk<T>(items: readonly T[], size: number): T[][] {
@@ -85,7 +98,7 @@ export function ModuleTile({ module, count, onOpen }: { module: HomeModule; coun
       className="min-h-[44px] min-w-0 flex-1 items-center gap-2 active:opacity-70"
     >
       <View className="h-[50px] w-[50px] items-center justify-center rounded-[16px]" style={{ backgroundColor: tone.box }}>
-        <Icon icon={module.icon} size={22} rawColor={tone.icon} />
+        <ModuleIcon module={module} size={22} color={tone.icon} />
         <TileMarker module={module} count={count} className="-right-1.5 -top-1.5" />
       </View>
       <Text weight="medium" numberOfLines={2} maxFontSizeMultiplier={1.2} className="text-center text-ink" style={{ fontSize: 12, lineHeight: 15 }}>

@@ -330,11 +330,15 @@ const vi = {
     },
     opensOtherApp: 'mở ứng dụng khác',
     externalMissing: 'Không mở được {{name}}. Mở cửa hàng ứng dụng để cài đặt?',
+    externalFailed: 'Không mở được {{name}}.',
     openStore: 'Mở cửa hàng',
+    noModules: 'Tài khoản của bạn chưa được cấp tiện ích nào. Kéo xuống để tải lại.',
+    appsUnavailable: 'Chưa tải được danh sách tiện ích. Kéo xuống để thử lại.',
     groups: {
       meeting: 'Phòng họp',
       parcel: 'Bưu phẩm',
       hr: 'Nhân sự',
+      other: 'Ứng dụng khác',
     },
     modules: {
       bookRoom: 'Đặt phòng họp',

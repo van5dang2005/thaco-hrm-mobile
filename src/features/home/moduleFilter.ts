@@ -1,5 +1,7 @@
 import type { ServiceId } from '@/core/api/ApiError';
 import type { Capability } from '@/core/session/capabilities';
+import { type MyApp, serviceAppCodes, sortApps } from '@/core/session/myApps';
+import { AppWindowIcon } from '@/shared/ui/icons';
 
 import type { HomeModule, ModuleGroup } from './modules';
 
@@ -20,9 +22,45 @@ export function filterModules<M extends Pick<HomeModule, 'permission'>>(modules:
   return modules.filter((module) => canSeeModule(module, ctx));
 }
 
-/** Non-empty groups in `order`, each keeping the config order of its modules. */
-export function groupModules<M extends Pick<HomeModule, 'group'>>(modules: readonly M[], order: readonly ModuleGroup[]) {
-  return order
-    .map((group) => ({ group, modules: modules.filter((m) => m.group === group) }))
-    .filter((entry) => entry.modules.length > 0);
+/** The device can open it: it names a scheme (`https:`, `thacopaytime:`…), unlike a path relative to the portal. */
+const OPENABLE_URL = /^[a-z][a-z\d+.-]*:/i;
+
+/** Tile of a granted app without screens here: its web app (`url`) under the portal's name and icon; `null` with nothing to open. */
+export function webModule(app: MyApp): HomeModule | null {
+  const url = app.url?.trim();
+  if (!url || !OPENABLE_URL.test(url)) return null;
+  return {
+    id: `app:${app.code}`,
+    group: 'other',
+    title: app.name?.trim() || app.code,
+    icon: AppWindowIcon,
+    iconUrl: app.icon?.trim() || undefined,
+    externalUrl: url,
+  };
+}
+
+/**
+ * Home tiles of the portal's `apps`: the `native` tiles of each app with screens here, in portal order, then a
+ * `webModule` for every other app (also one whose back-end has no tiles yet). An app listed twice counts once.
+ */
+export function appModules(apps: readonly MyApp[] | null, native: readonly HomeModule[]): HomeModule[] {
+  const seen = new Set<string>();
+  const own: HomeModule[] = [];
+  const web: HomeModule[] = [];
+  for (const app of sortApps(apps ?? [])) {
+    if (seen.has(app.code)) continue;
+    seen.add(app.code);
+    const tiles = native.filter((module) => module.permission && serviceAppCodes[module.permission.service] === app.code);
+    const tile = tiles.length ? null : webModule(app);
+    own.push(...tiles);
+    if (tile) web.push(tile);
+  }
+  return [...own, ...web];
+}
+
+/** Non-empty groups in the order of their first module, each keeping the order of its modules. */
+export function groupModules<M extends Pick<HomeModule, 'group'>>(modules: readonly M[]) {
+  const groups = new Map<ModuleGroup, M[]>();
+  modules.forEach((module) => groups.set(module.group, [...(groups.get(module.group) ?? []), module]));
+  return Array.from(groups, ([group, items]) => ({ group, modules: items }));
 }

@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 
 import type { ServiceId } from '@/core/api/ApiError';
-import { apiFor } from '@/core/api/clients';
+import { apiFor, services } from '@/core/api/clients';
 import type { NotificationDto, Paginated } from '@/core/api/types';
 import { qk } from '@/core/query/keys';
 import { useSessionStore } from '@/core/session/sessionStore';
@@ -16,20 +16,24 @@ export const notificationsApi = {
   removeAll: (service: ServiceId) => apiFor(service).delete<boolean>('/api/notifications/bulk-delete'),
 };
 
+const unreadQuery = (service: ServiceId, connected: boolean) => ({
+  queryKey: qk.notifications.unread(service),
+  queryFn: () => notificationsApi.totalUnread(service),
+  enabled: connected,
+  // SignalR pushes updates; polling is only a fallback when the socket is down.
+  refetchInterval: 120_000,
+});
+
 export function useUnreadCount(service: ServiceId) {
   const connected = useSessionStore((s) => s.connected[service]);
-  return useQuery({
-    queryKey: qk.notifications.unread(service),
-    queryFn: () => notificationsApi.totalUnread(service),
-    enabled: connected,
-    // SignalR pushes updates; polling is only a fallback when the socket is down.
-    refetchInterval: 120_000,
-  });
+  return useQuery(unreadQuery(service, connected));
 }
 
-/** Badge on the bell: unread notifications of both services. */
+/** Badge on the bell: unread notifications of every back-end the user may call. */
 export function useTotalUnread() {
-  const parcel = useUnreadCount('parcel');
-  const room = useUnreadCount('room');
-  return (Number(parcel.data) || 0) + (Number(room.data) || 0);
+  const connected = useSessionStore((s) => s.connected);
+  return useQueries({
+    queries: services.map((service) => unreadQuery(service, connected[service])),
+    combine: (results) => results.reduce((sum, result) => sum + (Number(result.data) || 0), 0),
+  });
 }

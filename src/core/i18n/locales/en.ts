@@ -330,11 +330,15 @@ const en: Translation = {
     },
     opensOtherApp: 'opens another app',
     externalMissing: 'Could not open {{name}}. Open the store to install it?',
+    externalFailed: 'Could not open {{name}}.',
     openStore: 'Open store',
+    noModules: 'No apps are assigned to your account yet. Pull down to refresh.',
+    appsUnavailable: 'Could not load your apps. Pull down to try again.',
     groups: {
       meeting: 'Meeting rooms',
       parcel: 'Parcels',
       hr: 'HR',
+      other: 'Other apps',
     },
     modules: {
       bookRoom: 'Book a room',

@@ -1,24 +1,20 @@
-import type { ServiceId } from '@/core/api/ApiError';
 import { setUnauthorizedHandler } from '@/core/api/http';
 import type { LoginRequest } from '@/core/api/types';
 import { clearQueryCache } from '@/core/query/queryClient';
 import { kv, kvKeys, readJSON, writeJSON } from '@/core/storage/kv';
 
 import { biometricAccount, type BiometricSession, disableBiometric, dropOrphanedCredentials, enableBiometric } from './biometric';
-import { fetchMyApps, grantedServices, type MyApp } from './myApps';
+import { fetchMyApps, type MyApp } from './myApps';
 import { type SignOutReason, useSessionStore } from './sessionStore';
-import { SsoError } from './SsoError';
 import { endSsoSession, fetchSsoAccount, passwordGrant, refreshGrant, refreshTokenInfo, type SsoAccount } from './sso';
-import { tokenStore, type TokenPair } from './tokenStore';
+import { SsoError } from './SsoError';
+import { type TokenPair, tokenStore } from './tokenStore';
 
 /**
  * Keycloak login for the form: `name@domain` (Keycloak accepts the email) or, with no domain, the MSNV,
  * which is the Keycloak username. An email typed in full is kept as is.
  */
 const ssoUsername = ({ username, domain }: LoginRequest) => (domain && !username.includes('@') ? `${username}@${domain}` : username);
-
-/** Back-ends to call: those the portal grants, or all of them while its list is unknown. */
-const servicesFor = (apps: MyApp[] | null): Record<ServiceId, boolean> => (apps ? grantedServices(apps) : { parcel: true, room: true });
 
 function saveApps(apps: MyApp[] | null) {
   if (apps) writeJSON(kvKeys.myApps, apps);
@@ -63,7 +59,8 @@ async function startSession(pair: TokenPair, login: Pick<LoginRequest, 'username
     if (endOnFailure) void endSsoSession(pair.refreshToken);
     throw error;
   }
-  // Best effort: while the portal's list is unknown both services stay on; the next launch retries.
+  // Best effort: while the portal's list is unknown no back-end is called and Home has no tiles; the next
+  // launch or a pull-to-refresh on Home retries.
   const apps = await fetchMyApps(account).catch(() => null);
   await tokenStore.set(pair);
 
@@ -73,10 +70,13 @@ async function startSession(pair: TokenPair, login: Pick<LoginRequest, 'username
   saveApps(apps);
   // A different person may be signing in on a shared device; never show their cached data.
   clearQueryCache();
-  useSessionStore.getState().markSignedIn({ username: login.username, connected: servicesFor(apps), apps });
+  useSessionStore.getState().markSignedIn({ username: login.username, apps });
 }
 
-/** Re-reads the granted apps (an admin may have changed them). Keeps the saved list when the portal is unreachable. */
+/**
+ * Re-reads the granted apps (an admin may have changed them): at launch and on Home's pull-to-refresh.
+ * Keeps the saved list when the portal is unreachable.
+ */
 export async function refreshMyApps() {
   const saved = kv.getString(kvKeys.ssoAccount);
   const account = readJSON<SsoAccount>(kvKeys.ssoAccount);
@@ -85,7 +85,7 @@ export async function refreshMyApps() {
   // Signed out, or in as someone else, meanwhile.
   if (!apps || useSessionStore.getState().status !== 'signedIn' || kv.getString(kvKeys.ssoAccount) !== saved) return;
   saveApps(apps);
-  useSessionStore.getState().setApps(apps, servicesFor(apps));
+  useSessionStore.getState().setApps(apps);
 }
 
 /**
@@ -170,7 +170,7 @@ export async function restoreSession() {
     return;
   }
   const apps = readJSON<MyApp[]>(kvKeys.myApps) ?? null;
-  useSessionStore.getState().markSignedIn({ username: kv.getString(kvKeys.lastUsername) ?? null, connected: servicesFor(apps), apps });
+  useSessionStore.getState().markSignedIn({ username: kv.getString(kvKeys.lastUsername) ?? null, apps });
   void refreshMyApps();
 }
 

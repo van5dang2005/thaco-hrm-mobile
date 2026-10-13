@@ -5,7 +5,7 @@
 - **Phòng họp** (`thaco_be_ql_phong_hop`): lịch phòng, đặt phòng (lặp lịch), phê duyệt nhiều cấp, gia hạn / kết thúc sớm / hủy.
 - **Bưu phẩm** (`thaco_be_ql_buu_pham`): bưu phẩm của tôi, ủy quyền nhận thay, lễ tân tiếp nhận và bàn giao.
 
-Chấm công không nằm trong app: ô "Chấm công" mở app THACO Paytime.
+Tiện ích trên trang chủ lấy theo các ứng dụng mà cổng ứng dụng THACO (`my-apps`) cấp cho tài khoản: ứng dụng có màn hình riêng trong app (phòng họp, bưu phẩm) hiện các ô của nó, ứng dụng khác hiện một ô mở bản web.
 
 Stack: Expo SDK 55 (React Native 0.83, Expo Router, React Compiler), TypeScript strict, TanStack Query, Zustand, NativeWind, react-hook-form + zod, expo-secure-store, react-native-mmkv, @microsoft/signalr, i18next (vi mặc định, en).
 

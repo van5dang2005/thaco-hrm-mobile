@@ -5,29 +5,37 @@ import { Alert, Linking, Platform } from 'react-native';
 import { useCapabilities } from '@/core/session/capabilities';
 import { useSessionStore } from '@/core/session/sessionStore';
 
-import { filterModules } from './moduleFilter';
-import { homeModules, type HomeModule } from './modules';
+import { appModules, filterModules } from './moduleFilter';
+import { type HomeModule, nativeModules } from './modules';
 import { orderModules, useHomePrefs } from './prefs';
 import type { Signal } from './signals';
 
-/** Modules the user may see (connected services + permissions), in the user's order. */
-export function useHomeModules() {
+/** Modules the user may see (apps the portal grants, permissions), in their default order. */
+export function useAvailableModules() {
   const { has } = useCapabilities();
+  const apps = useSessionStore((s) => s.apps);
   const connected = useSessionStore((s) => s.connected);
+  return filterModules(appModules(apps, nativeModules), { connected, has });
+}
+
+/** `useAvailableModules` in the user's order. */
+export function useHomeModules() {
+  const modules = useAvailableModules();
   const order = useHomePrefs((s) => s.order);
-  return orderModules(filterModules(homeModules, { connected, has }), order);
+  return orderModules(modules, order);
 }
 
 export type ModuleSignals = Record<string, { badge?: Signal<number>; summary?: Signal<string> }>;
 
 /**
- * Badge and summary of every module. `homeModules` is a constant, so the hooks below run in the
- * same order on every render. Opted out of React Compiler, which only recognises `use*` names.
+ * Badge and summary of every tile with screens here (web apps have none). `nativeModules` is a constant,
+ * so the hooks below run in the same order on every render. Opted out of React Compiler, which only
+ * recognises `use*` names.
  */
 export function useModuleSignals(): ModuleSignals {
   'use no memo';
   const signals: ModuleSignals = {};
-  for (const module of homeModules) {
+  for (const module of nativeModules) {
     signals[module.id] = { badge: module.badge?.(), summary: module.summary?.() };
   }
   return signals;
@@ -35,7 +43,10 @@ export function useModuleSignals(): ModuleSignals {
 
 export function useModuleLabel() {
   const { t } = useTranslation();
-  return (module: HomeModule, short = false) => t(`home.modules.${short && module.shortLabelKey ? module.shortLabelKey : module.labelKey}`);
+  return (module: HomeModule, short = false) => {
+    if (module.title !== undefined) return module.title;
+    return t(`home.modules.${short && module.shortLabelKey ? module.shortLabelKey : module.labelKey}`);
+  };
 }
 
 export function useOpenModule() {
@@ -49,7 +60,7 @@ export function useOpenModule() {
       const store = module.storeUrl;
       Alert.alert(
         label(module),
-        t('home.externalMissing', { name: label(module) }),
+        store ? t('home.externalMissing', { name: label(module) }) : t('home.externalFailed', { name: label(module) }),
         store
           ? [
               { text: t('common.cancel'), style: 'cancel' },

@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { AppState } from 'react-native';
 
 import type { ServiceId } from '@/core/api/ApiError';
+import { services } from '@/core/api/clients';
 import { qk } from '@/core/query/keys';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { kv, kvKeys } from '@/core/storage/kv';
@@ -42,7 +43,7 @@ export function RealtimeProvider() {
       onResourceUpdated: (service, payload) => invalidate(keysForResource(service, payload.resourceType)),
     };
 
-    const active = (['parcel', 'room'] as const).filter((service) => connected[service]);
+    const active = services.filter((service) => connected[service]);
     active.forEach((service) => {
       const hub = new ServiceHub(service, handlers);
       hubs.current[service] = hub;

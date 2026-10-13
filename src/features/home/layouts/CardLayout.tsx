@@ -19,7 +19,7 @@ import type { HomeModule } from '../modules';
 import { pickNextMeeting, useFreeRooms, useTodayMeetings, useTodoItems } from '../signals';
 import { todoTones, useVisibleTodos } from '../TodoTiles';
 import { useModuleLabel } from '../useModules';
-import { chunk, type LayoutProps, RowPadding, useGroupTone, useTileA11yLabel } from './shared';
+import { chunk, type LayoutProps, ModuleIcon, RowPadding, useGroupTone, useTileA11yLabel } from './shared';
 
 /** Modules already summed up by the widgets on top; "Tiện ích khác" lists the rest. */
 const widgetModules = new Set(['approve-rooms', 'parcels', 'book-room', 'room-calendar', 'my-meetings']);
@@ -241,7 +241,7 @@ function ModuleCard({ module, summary, count, onOpen }: { module: HomeModule; su
       style={shadows.card}
     >
       <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={{ backgroundColor: tone.box }}>
-        <Icon icon={module.icon} size={18} rawColor={tone.icon} />
+        <ModuleIcon module={module} size={18} color={tone.icon} />
       </View>
       <View className="min-w-0 flex-1">
         <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 13.5, lineHeight: 18 }}>

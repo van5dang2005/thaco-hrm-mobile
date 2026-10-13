@@ -1,3 +1,7 @@
+/**
+ * Back-ends this app has screens for. Adding one starts here: the compiler then asks for its client
+ * (`clients.ts`) and the apps-portal code that grants it (`serviceAppCodes`); its home tiles go in `nativeModules`.
+ */
 export type ServiceId = 'parcel' | 'room';
 
 type ApiErrorInit = {
