@@ -12,13 +12,10 @@ import {
   InboxIcon,
   PackageIcon,
   SquareCheckBigIcon,
-  UserCheckIcon,
 } from '@/shared/ui/icons';
 
 import {
   type Signal,
-  useDelegationsAwaitingMe,
-  useDelegationSummary,
   useFreeRoomsSummary,
   useMeetingsTodaySummary,
   useParcelSummary,
@@ -133,17 +130,6 @@ export const nativeModules: readonly HomeModule[] = [
     badge: useWaitingParcels,
     summary: useParcelSummary,
     urgentWhenBadged: true,
-  },
-  {
-    id: 'delegations',
-    group: 'parcel',
-    labelKey: 'delegations',
-    shortLabelKey: 'delegationsShort',
-    icon: UserCheckIcon,
-    route: '/parcels/delegations',
-    permission: { service: 'parcel' },
-    badge: useDelegationsAwaitingMe,
-    summary: useDelegationSummary,
   },
   {
     id: 'reception',

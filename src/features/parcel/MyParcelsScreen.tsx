@@ -9,8 +9,7 @@ import { qk } from '@/core/query/keys';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { useParcelMe } from '@/core/session/useMe';
 import { FloatingCard } from '@/shared/ui/Card';
-import { HeaderIconButton } from '@/shared/ui/HeaderBar';
-import { PackageIcon, UserCheckIcon } from '@/shared/ui/icons';
+import { PackageIcon } from '@/shared/ui/icons';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { CONTENT_PADDING, ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
@@ -30,7 +29,7 @@ const empty: Record<ParcelTab, 'parcels.emptyPending' | 'parcels.emptyOverdue' |
   cancelled: 'parcels.emptyCancelled',
 };
 
-/** "Bưu phẩm của tôi" (6d): my parcels plus those I collect on someone's behalf. */
+/** "Bưu phẩm của tôi" (6d). */
 export function MyParcelsScreen() {
   const { t } = useTranslation();
   const connected = useSessionStore((s) => s.connected.parcel);
@@ -55,12 +54,7 @@ export function MyParcelsScreen() {
   ];
 
   const header = (
-    <ModuleHeader
-      testID="parcels-header"
-      icon={PackageIcon}
-      title={t('parcels.title')}
-      right={<HeaderIconButton testID="parcels-delegations" icon={UserCheckIcon} label={t('parcels.delegation')} onPress={() => router.push('/parcels/delegations')} />}
-    />
+    <ModuleHeader testID="parcels-header" icon={PackageIcon} title={t('parcels.title')} />
   );
 
   const floating = (

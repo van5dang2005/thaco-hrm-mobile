@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 import type { ColorToken } from '@/core/theme/palette';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { Icon } from '@/shared/ui/Icon';
-import { type AppIcon, ArrowUpRightIcon, PackageIcon, SquareCheckBigIcon, UserCheckIcon } from '@/shared/ui/icons';
+import { type AppIcon, ArrowUpRightIcon, PackageIcon, SquareCheckBigIcon } from '@/shared/ui/icons';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { Text } from '@/shared/ui/Text';
 
@@ -16,10 +16,9 @@ import { todoModuleIds, type TodoKind, useTodoItems } from './signals';
 export const todoTones: Record<TodoKind, { icon: AppIcon; tint: ColorToken; solid: ColorToken; deep: ColorToken }> = {
   approvals: { icon: SquareCheckBigIcon, tint: 'primary-tint', solid: 'primary', deep: 'primary-dark' },
   parcels: { icon: PackageIcon, tint: 'warning-tint', solid: 'warning', deep: 'warning-deep' },
-  delegations: { icon: UserCheckIcon, tint: 'success-tint', solid: 'success', deep: 'success-deep' },
 };
 
-const kinds: TodoKind[] = ['approvals', 'parcels', 'delegations'];
+const kinds: TodoKind[] = ['approvals', 'parcels'];
 
 /** The to-do kinds whose module the user can see, with the module to open. */
 export function useVisibleTodos(modules: HomeModule[]) {
@@ -29,7 +28,7 @@ export function useVisibleTodos(modules: HomeModule[]) {
   });
 }
 
-/** "Cần xử lý" (2c): three equal tinted tiles — Chờ duyệt, Bưu phẩm, Ủy quyền. */
+/** "Cần xử lý" (2c): equal tinted tiles — Chờ duyệt, Bưu phẩm. */
 export function TodoTiles({ modules, onOpen }: { modules: HomeModule[]; onOpen: (module: HomeModule) => void }) {
   const { t } = useTranslation();
   const visible = useVisibleTodos(modules);

@@ -7,7 +7,7 @@ import { cn } from '@/shared/lib/cn';
 
 import { Icon } from './Icon';
 import type { AppIcon } from './icons';
-import { bookingBadgeKind, delegationBadgeKind, parcelBadgeKind, type BadgeKind } from './status';
+import { bookingBadgeKind, parcelBadgeKind, type BadgeKind } from './status';
 import { Text } from './Text';
 
 export type { BadgeKind } from './status';
@@ -32,7 +32,7 @@ const dotColor: Record<BadgeKind, ColorToken | 'white'> = { wait: 'primary', war
 
 type Props = { kind: BadgeKind; label: string; icon?: AppIcon; /** 6px dot in the tone's solid color before the label. */ dot?: boolean; className?: string; testID?: string };
 
-/** 24pt status pill, radius 12, 11/700 (README "Màu trạng thái"). The same five kinds serve parcels, delegations and bookings. */
+/** 24pt status pill, radius 12, 11/700 (README "Màu trạng thái"). The same five kinds serve parcels and bookings. */
 export function StatusBadge({ kind, label, icon, dot, className, testID }: Props) {
   const { colors } = useTheme();
   const c = useBadgeColors(kind);
@@ -54,19 +54,6 @@ export function ParcelBadge({ status, short, dot, className, testID }: StatusPro
   const { t } = useTranslation();
   const label = short ? t(`status.parcelShort.${String(status) as '1'}`, { defaultValue: String(status) }) : t(`status.parcel.${String(status) as '1'}`, { defaultValue: String(status) });
   return <StatusBadge kind={parcelBadgeKind(status)} label={label} dot={dot} className={className} testID={testID} />;
-}
-
-export function DelegationBadge({ status, label, dot, className, testID }: StatusProps & { label?: string }) {
-  const { t } = useTranslation();
-  return (
-    <StatusBadge
-      kind={delegationBadgeKind(status)}
-      label={label ?? t(`status.delegation.${String(status) as '1'}`, { defaultValue: String(status) })}
-      dot={dot}
-      className={className}
-      testID={testID}
-    />
-  );
 }
 
 export function BookingBadge({ status, live, dot, className, testID }: StatusProps & { live?: boolean }) {

@@ -77,8 +77,6 @@ export function useOpenModule() {
     } else if (module.route) {
       module.onBeforeOpen?.();
       router.push(module.route);
-    } else {
-      router.push({ pathname: '/coming-soon', params: { module: label(module) } });
     }
   };
 }

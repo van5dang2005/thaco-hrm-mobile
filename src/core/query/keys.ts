@@ -46,8 +46,4 @@ export const qk = {
     receptionStats: (params: Record<string, unknown>) => ['parcels', 'reception-stats', params] as const,
     departments: ['parcels', 'departments'] as const,
   },
-  delegations: {
-    root: ['delegations'] as const,
-    list: (params: Record<string, unknown>) => ['delegations', 'list', params] as const,
-  },
 };

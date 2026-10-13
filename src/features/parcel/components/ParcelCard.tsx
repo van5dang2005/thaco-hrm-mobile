@@ -3,7 +3,6 @@ import { View } from 'react-native';
 
 import { sameId } from '@/core/session/userTypes';
 import { formatDayMonth, formatKey, formatTime, parseServerDate } from '@/core/time/vn';
-import { Avatar } from '@/shared/ui/Avatar';
 import { PressableCard } from '@/shared/ui/Card';
 import { PackageIcon } from '@/shared/ui/icons';
 import { RoundIcon, type RoundIconTone } from '@/shared/ui/RoundIcon';
@@ -12,7 +11,7 @@ import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 
 import { isOpenParcel, parcelDeadline, senderTitle } from '../logic';
-import { MatchReason, ParcelStatus, type ParcelLookupDto } from '../types';
+import { ParcelStatus, type ParcelLookupDto } from '../types';
 import { DeadlineBar } from './DeadlineBars';
 
 /** Package icon tone follows the status badge (wait / warn / danger / ok / off). */
@@ -31,11 +30,7 @@ export function ParcelCard({ parcel, myCode, onPress }: Props) {
   // From the receiver's side a handed-over parcel reads "Đã nhận" rather than "Đã giao".
   const badgeLabel = parcel.status === ParcelStatus.HandedOver ? t('parcels.badgeReceived') : t(`status.parcelShort.${String(parcel.status) as '1'}`);
 
-  const collector = sameId(parcel.actualReceiverCode, myCode)
-    ? sameId(parcel.receiverCode, myCode)
-      ? t('parcels.handedYouDirect')
-      : t('parcels.handedYouBehalf')
-    : t('parcels.handedBy', { code: parcel.actualReceiverCode ?? '' });
+  const collector = sameId(parcel.actualReceiverCode, myCode) ? t('parcels.handedYouDirect') : t('parcels.handedBy', { code: parcel.actualReceiverCode ?? '' });
 
   return (
     <PressableCard testID={`parcel-${parcel.trackingNumber}`} onPress={onPress} className="gap-3 p-3.5" style={{ flexShrink: 0 }}>
@@ -66,19 +61,6 @@ export function ParcelCard({ parcel, myCode, onPress }: Props) {
         <Text numberOfLines={2} className="border-t border-line-2 pt-2.5 text-subtle" style={meta}>
           {t('parcels.cancelledAuto', { date: formatKey(deadline.cancelKey, false) })}
         </Text>
-      ) : null}
-
-      {parcel.matchReason !== MatchReason.Direct ? (
-        <View className="flex-row items-center gap-2.5 rounded-[12px] bg-panel px-2.5 py-2">
-          <Avatar name={parcel.delegatorFullName} uri={parcel.delegationAvatarUrl} size={28} />
-          <Text numberOfLines={2} className="min-w-0 flex-1" style={{ fontSize: 12.5, lineHeight: 17 }}>
-            {`${t('parcels.onBehalf')} `}
-            <Text weight="bold" style={{ fontSize: 12.5 }}>
-              {parcel.delegatorFullName}
-            </Text>
-          </Text>
-          <StatusBadge kind="off" label={t('parcels.delegation')} />
-        </View>
       ) : null}
     </PressableCard>
   );

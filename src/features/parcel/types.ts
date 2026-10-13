@@ -8,28 +8,6 @@ export enum ParcelStatus {
   HandedOver = 5,
 }
 
-/** Note the numbering: Expired is 1 and Waiting is 5. */
-export enum DelegationStatus {
-  Expired = 1,
-  DueSoon = 2,
-  Active = 3,
-  Rejected = 4,
-  Waiting = 5,
-}
-
-export enum DelegationType {
-  /** Time-bound, covers every parcel of the authorizer. */
-  Default = 1,
-  /** Bound to one parcel (`Specific` in the C# enum, "chi tiết" in the UI). */
-  Specific = 2,
-}
-
-export enum MatchReason {
-  Direct = 0,
-  DetailedDelegation = 1,
-  DefaultDelegation = 2,
-}
-
 export enum EmailStatus {
   Skip = 0,
   Successful = 1,
@@ -41,7 +19,6 @@ export type ParcelAttachment = { id: string; fileName: string; filePath: string;
 export type ParcelLog = {
   id: string;
   parcelId?: string | null;
-  delegationId?: string | null;
   action: string;
   description?: string | null;
   performedBy: string;
@@ -51,41 +28,6 @@ export type ParcelLog = {
   isEmailSent?: boolean | null;
   emailStatus?: EmailStatus | null;
   createdAt: string;
-};
-
-export type RelatedUserSummary = {
-  id: string;
-  username: string;
-  email: string;
-  fullName?: string | null;
-  employeeCode?: string | null;
-  avatarUrl?: string | null;
-  phoneNumber?: string | null;
-  unitName?: string | null;
-  departmentId?: string | null;
-  departmentName?: string | null;
-  jobTitleName?: string | null;
-  positionName?: string | null;
-};
-
-/**
- * Delegation currently governing a parcel's handover (detailed first, then default).
- * Naming trap: `authorizer*` = the person who delegates (parcel owner);
- * `delegator*` / `delegateCode` = the person who RECEIVES the delegation.
- */
-export type RelatedDelegation = {
-  id: string;
-  authorizerId: string;
-  authorizerCode: string;
-  delegatorId: string;
-  delegateCode: string;
-  parcelId?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
-  status: DelegationStatus;
-  pendingEndDate?: string | null;
-  delegator?: RelatedUserSummary | null;
-  authorizer?: RelatedUserSummary | null;
 };
 
 export type ParcelDto = {
@@ -114,19 +56,12 @@ export type ParcelDto = {
   actualReceiverCode?: string | null;
   status: ParcelStatus;
   attachments: ParcelAttachment[];
-  relatedDelegation?: RelatedDelegation | null;
   logs: ParcelLog[];
 };
 
-/** Item of GET /api/parcels/my: no createdAt / cancelledAt, plus why it is in my list. */
-export type ParcelLookupDto = Omit<ParcelDto, 'relatedDelegation' | 'createdAt' | 'cancelledAt' | 'cancellationReason'> & {
+/** Item of GET /api/parcels/my: no createdAt / cancelledAt. */
+export type ParcelLookupDto = Omit<ParcelDto, 'createdAt' | 'cancelledAt' | 'cancellationReason'> & {
   createdAt?: string | null;
-  matchReason: MatchReason;
-  /** Owner of the parcel when I collect it on their behalf (null for Direct). */
-  delegatorCode?: string | null;
-  delegatorFullName?: string | null;
-  delegationDepartmentName?: string | null;
-  delegationAvatarUrl?: string | null;
 };
 
 export type ParcelStats = {
@@ -136,36 +71,6 @@ export type ParcelStats = {
   handedOver: number;
   overdue: number;
   cancelled: number;
-};
-
-export type DelegationUser = {
-  id: string;
-  username: string;
-  email: string;
-  fullname?: string | null;
-  employeeCode?: string | null;
-  avatarUrl?: string | null;
-  phoneNumber?: string | null;
-  departmentId?: string | null;
-  departmentName?: string | null;
-  jobTitleName?: string | null;
-};
-
-export type DelegationDto = {
-  id: string;
-  authorizerId: string;
-  authorizerCode: string;
-  delegatorId: string;
-  delegateCode: string;
-  parcelId?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
-  status: DelegationStatus;
-  appliedType: DelegationType;
-  /** Not in DelegationDto today (only in RelatedDelegation); read defensively. */
-  pendingEndDate?: string | null;
-  delegator?: DelegationUser | null;
-  authorizer?: DelegationUser | null;
 };
 
 export type ParcelDepartment = {

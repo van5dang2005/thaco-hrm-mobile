@@ -5,13 +5,13 @@ import { formatDayMonth, formatTime, isSameVnDay, parseServerDate } from '@/core
 import { cn } from '@/shared/lib/cn';
 import { Avatar } from '@/shared/ui/Avatar';
 import { Icon } from '@/shared/ui/Icon';
-import { CheckIcon, UserCheckIcon } from '@/shared/ui/icons';
+import { CheckIcon } from '@/shared/ui/icons';
 import { useCardStyle } from '@/shared/ui/Card';
 import { ParcelBadge } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 
 import { DeadlineBar } from '../components/DeadlineBars';
-import { delegationAllowsHandover, isOpenParcel, parcelDeadline, senderTitle } from '../logic';
+import { isOpenParcel, parcelDeadline, senderTitle } from '../logic';
 import { ParcelStatus, type ParcelDto } from '../types';
 
 type Props = {
@@ -21,7 +21,7 @@ type Props = {
   onPress: () => void;
 };
 
-/** Reception list card: tracking + status, sender, receiver, deadline, delegate in force. */
+/** Reception list card: tracking + status, sender, receiver, deadline. */
 export function ReceptionParcelCard({ parcel: p, selected, onToggle, onPress }: Props) {
   const { t } = useTranslation();
   const cardStyle = useCardStyle(false, selected);
@@ -29,7 +29,6 @@ export function ReceptionParcelCard({ parcel: p, selected, onToggle, onPress }: 
   const cancelled = p.status === ParcelStatus.Cancelled;
   const deadline = parcelDeadline(p);
   const received = parseServerDate(p.receivedAt ?? p.createdAt);
-  const delegate = p.relatedDelegation && delegationAllowsHandover(p.relatedDelegation) ? p.relatedDelegation.delegator : null;
   const receivedText = received
     ? t('parcels.receivedAt', { time: formatTime(received), date: isSameVnDay(received, new Date()) ? t('parcels.today') : formatDayMonth(received) })
     : '';
@@ -81,15 +80,6 @@ export function ReceptionParcelCard({ parcel: p, selected, onToggle, onPress }: 
             {` · ${[p.receiverCode, p.departmentName].filter(Boolean).join(' · ')}`}
           </Text>
         </View>
-
-        {open && delegate ? (
-          <View className="flex-row items-center gap-1.5 self-start rounded-[7px] bg-primary-tint px-2 py-1">
-            <Icon icon={UserCheckIcon} size={13} weight="bold" color="primary-tint-text" />
-            <Text weight="medium" className="text-meta-sm text-primary-tint-text" numberOfLines={1}>
-              {t('reception.delegatedTo', { name: delegate.fullName ?? delegate.username })}
-            </Text>
-          </View>
-        ) : null}
 
         {open && deadline ? <DeadlineBar status={p.status} deadline={deadline} /> : null}
       </View>

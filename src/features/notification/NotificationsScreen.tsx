@@ -14,7 +14,7 @@ import { Button } from '@/shared/ui/Button';
 import { PressableCard } from '@/shared/ui/Card';
 import { HeaderBar, HeaderPillButton } from '@/shared/ui/HeaderBar';
 import { HeaderSegmented } from '@/shared/ui/HeaderSegmented';
-import { type AppIcon, BellIcon, CalendarCheckIcon, CheckCheckIcon, PackageIcon, UsersIcon } from '@/shared/ui/icons';
+import { type AppIcon, BellIcon, CalendarCheckIcon, CheckCheckIcon, PackageIcon } from '@/shared/ui/icons';
 import { RoundIcon } from '@/shared/ui/RoundIcon';
 import { ScreenShell, SHEET_PADDING } from '@/shared/ui/ScreenShell';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
@@ -27,7 +27,6 @@ import { hrefForNotification } from './routing';
 
 function iconFor(service: ServiceId, code?: string | null): AppIcon {
   if (service === 'room') return CalendarCheckIcon;
-  if (code?.includes('DELEGATION')) return UsersIcon;
   return code ? PackageIcon : BellIcon;
 }
 

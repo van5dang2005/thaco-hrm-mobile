@@ -54,7 +54,6 @@ function RootNavigator() {
         <Stack.Protected guard={!signedIn}>
           <Stack.Screen name="(auth)" />
         </Stack.Protected>
-        <Stack.Screen name="(dev)/ui" />
       </Stack>
       <ToastHost />
     </NavigationThemeProvider>

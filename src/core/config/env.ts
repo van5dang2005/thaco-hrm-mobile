@@ -13,9 +13,6 @@ export const env = {
   /** Origin of thaco_be_ql_phong_hop (no trailing /api). */
   roomApiUrl: trimSlash(process.env.EXPO_PUBLIC_ROOM_API_URL ?? 'https://datphonghopapi.thaco.com.vn/'),
   /** Deep link that opens THACO Paytime; falls back to the store URL when it cannot be opened. */
-  paytimeUrl: process.env.EXPO_PUBLIC_PAYTIME_URL ?? 'thacopaytime://',
-  paytimeIosStoreUrl: process.env.EXPO_PUBLIC_PAYTIME_IOS_STORE_URL ?? 'https://apps.apple.com/vn/search?term=THACO%20Paytime',
-  paytimeAndroidStoreUrl: process.env.EXPO_PUBLIC_PAYTIME_ANDROID_STORE_URL ?? 'https://play.google.com/store/search?q=THACO%20Paytime&c=apps',
   itSupportPhone: process.env.EXPO_PUBLIC_IT_SUPPORT_PHONE ?? '',
   /** THACO apps portal: which applications (parcel, room, văn thư…) the signed-in account may use. */
   appsApiUrl: trimSlash(process.env.EXPO_PUBLIC_APPS_API_URL || 'https://appsapi.thaco.com.vn'),

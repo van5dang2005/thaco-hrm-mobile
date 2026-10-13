@@ -9,7 +9,7 @@ export const homeLayouts: HomeLayout[] = ['grid', 'grouped', 'cards'];
 
 export type HomePrefsValues = {
   layout: HomeLayout;
-  /** "Cần xử lý" block (pending approvals, parcels, delegations). */
+  /** "Cần xử lý" block (pending approvals, parcels). */
   showTodo: boolean;
   /** "Họp tiếp theo" row in the greeting card. */
   showNextMeeting: boolean;

@@ -40,7 +40,7 @@ const layoutComponents: Record<HomeLayout, ComponentType<LayoutProps>> = {
 const FADE_MS = 200;
 
 /** Query groups behind the profile, badges and summaries (pull-to-refresh, with the granted apps). */
-const refreshKeys = [...services.map((service) => qk.me(service)), qk.notifications.root, qk.approvals.root, qk.bookings.root, qk.rooms.root, qk.parcels.root, qk.delegations.root];
+const refreshKeys = [...services.map((service) => qk.me(service)), qk.notifications.root, qk.approvals.root, qk.bookings.root, qk.rooms.root, qk.parcels.root];
 
 /** Home (2c / 2f / 2g): wordmark pill + bell + layout button, the blue greeting card, then the chosen layout. */
 export function HomeScreen() {

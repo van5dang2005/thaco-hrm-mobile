@@ -4,14 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { qk } from '@/core/query/keys';
 import { useCapabilities } from '@/core/session/capabilities';
 import { useSessionStore } from '@/core/session/sessionStore';
-import { useParcelMe } from '@/core/session/useMe';
 import { sameId } from '@/core/session/userTypes';
 import { addDays, atMinutes, formatKey, minutesOfDay, parseTimeOfDay, todayKey, type DateKey } from '@/core/time/vn';
 import { useApprovalStats } from '@/features/approval/hooks';
 import { parcelsApi } from '@/features/parcel/api';
 import { parcelDeadline } from '@/features/parcel/logic';
-import { useMyDelegations, useMyParcelStats, useReceptionStats } from '@/features/parcel/hooks';
-import { DelegationStatus, ParcelStatus } from '@/features/parcel/types';
+import { useMyParcelStats, useReceptionStats } from '@/features/parcel/hooks';
+import { ParcelStatus } from '@/features/parcel/types';
 import { bookingsApi } from '@/features/room-booking/api';
 import { useDefaultAreaId, useRooms, useSchedule } from '@/features/room-booking/hooks';
 import { bookingFrom, bookingTo } from '@/features/room-booking/logic';
@@ -138,10 +137,8 @@ export function useDueParcels(enabled = true) {
     queryFn: () => parcelsApi.my({ pageNumber: 1, pageSize: 50, statuses: [ParcelStatus.Due] }),
     enabled: connected && enabled,
     select: (page) => {
-      // Only my own parcels count here; ones I collect for someone else are theirs to worry about.
-      const mine = page.items.filter((p) => !p.matchReason);
-      const due = mine.map((p) => parcelDeadline(p)?.dueKey).filter((key): key is DateKey => !!key).sort();
-      return { count: mine.length, firstDueKey: due[0] ?? null };
+      const due = page.items.map((p) => parcelDeadline(p)?.dueKey).filter((key): key is DateKey => !!key).sort();
+      return { count: page.items.length, firstDueKey: due[0] ?? null };
     },
   });
 }
@@ -163,30 +160,6 @@ export function useParcelSummary(): Signal<string> {
   return { data: parts.filter(Boolean).join(' · '), isLoading: false };
 }
 
-/** Delegations waiting for me (as the delegate) to accept or decline. */
-export function useDelegationsAwaitingMe(): Signal<number> {
-  const me = useParcelMe();
-  const delegations = useMyDelegations();
-  if (!delegations.data || !me.data) return { data: undefined, isLoading: delegations.isLoading || me.isLoading };
-  return {
-    data: delegations.data.filter((d) => sameId(d.delegatorId, me.data.id) && d.status === DelegationStatus.Waiting).length,
-    isLoading: false,
-  };
-}
-
-export function useDelegationSummary(): Signal<string> {
-  const { t } = useTranslation();
-  const me = useParcelMe();
-  const delegations = useMyDelegations();
-  const awaiting = useDelegationsAwaitingMe();
-  if (awaiting.data === undefined) return { data: undefined, isLoading: awaiting.isLoading };
-  if (awaiting.data) return { data: t('home.summary.delegationsAwaiting', { count: awaiting.data }), isLoading: false };
-  const active = (delegations.data ?? []).filter(
-    (d) => sameId(d.authorizerId, me.data?.id) && (d.status === DelegationStatus.Active || d.status === DelegationStatus.DueSoon),
-  ).length;
-  return { data: active ? t('home.summary.delegationsActive', { count: active }) : t('home.summary.delegationsNone'), isLoading: false };
-}
-
 /** Reception desk: parcels of my units still waiting for hand-over. */
 export function useReceptionSummary(): Signal<string> {
   const { t } = useTranslation();
@@ -203,10 +176,10 @@ export function useReceptionSummary(): Signal<string> {
 
 // ── "Cần xử lý" ─────────────────────────────────────────────────────────────
 
-export type TodoKind = 'approvals' | 'parcels' | 'delegations';
+export type TodoKind = 'approvals' | 'parcels';
 
 /** The module behind each to-do tile; a tile shows only when its module is visible to the user. */
-export const todoModuleIds: Record<TodoKind, string> = { approvals: 'approve-rooms', parcels: 'parcels', delegations: 'delegations' };
+export const todoModuleIds: Record<TodoKind, string> = { approvals: 'approve-rooms', parcels: 'parcels' };
 
 export type TodoItem = { kind: TodoKind; count?: number; sub?: string; isLoading: boolean };
 
@@ -216,7 +189,6 @@ export function useTodoItems(): Record<TodoKind, TodoItem> {
   const approvals = usePendingApprovals();
   const stats = useMyParcelStats();
   const due = useDueParcels();
-  const delegations = useDelegationsAwaitingMe();
 
   const s = stats.data;
   const parcelCount = s ? s.waiting + s.overdue : undefined;
@@ -233,11 +205,5 @@ export function useTodoItems(): Record<TodoKind, TodoItem> {
   return {
     approvals: { kind: 'approvals', count: approvals.data, sub: t('home.todo.approvalsSub'), isLoading: approvals.isLoading },
     parcels: { kind: 'parcels', count: parcelCount, sub: parcelSub, isLoading: stats.isLoading },
-    delegations: {
-      kind: 'delegations',
-      count: delegations.data,
-      sub: delegations.data ? t('home.todo.delegationsSub') : t('home.todo.delegationsNone'),
-      isLoading: delegations.isLoading,
-    },
   };
 }

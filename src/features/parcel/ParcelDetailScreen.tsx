@@ -11,7 +11,6 @@ import { useParcelMe } from '@/core/session/useMe';
 import { sameId } from '@/core/session/userTypes';
 import { formatDate, formatDayMonth, formatTime, parseServerDate } from '@/core/time/vn';
 import { goBack } from '@/shared/lib/navigation';
-import { Banner } from '@/shared/ui/Banner';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Card, FloatingCard } from '@/shared/ui/Card';
@@ -22,14 +21,11 @@ import { KeyValueRow } from '@/shared/ui/KeyValueRow';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { NoteField } from '@/shared/ui/NoteField';
-import { PersonRow } from '@/shared/ui/PersonRow';
-import { RoundIcon } from '@/shared/ui/RoundIcon';
 import { useHeaderColors } from '@/shared/ui/ScreenShell';
 import { SectionTitle } from '@/shared/ui/SectionTitle';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/StateViews';
 import { parcelBadgeKind } from '@/shared/ui/status';
-import { DelegationBadge } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
 
@@ -37,16 +33,13 @@ import { parcelsApi } from './api';
 import { daysLeftLabel, LifecyclePanel } from './components/DeadlineBars';
 import { ParcelTimeline } from './components/ParcelTimeline';
 import { PhotoStrip } from './components/PhotoStrip';
-import { useMyDelegations, useParcel } from './hooks';
-import { activeDefaultOf, isOpenParcel, MAX_PARCEL_FILES, parcelDeadline, senderTitle } from './logic';
-import { DelegationStatus, ParcelStatus, type RelatedUserSummary } from './types';
-
-const summaryPerson = (u?: RelatedUserSummary | null) =>
-  u ? { id: u.id, name: u.fullName ?? u.username, code: u.employeeCode, department: u.departmentName, avatarUrl: u.avatarUrl } : null;
+import { useParcel } from './hooks';
+import { isOpenParcel, MAX_PARCEL_FILES, parcelDeadline, senderTitle } from './logic';
+import { ParcelStatus } from './types';
 
 type MoreAction = { label: string; destructive?: boolean; onPress: () => void };
 
-/** Chi tiết bưu phẩm (6e): status + lifecycle on the header, info card over it, photos, delegation and history below. */
+/** Chi tiết bưu phẩm (6e): status + lifecycle on the header, info card over it, photos and history below. */
 export function ParcelDetailScreen() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -54,7 +47,6 @@ export function ParcelDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const parcel = useParcel(id);
   const me = useParcelMe();
-  const delegations = useMyDelegations();
   const { has } = useCapabilities();
   const reception = has('parcel.reception');
   const [noteOpen, setNoteOpen] = useState(false);
@@ -62,10 +54,7 @@ export function ParcelDetailScreen() {
   const p = parcel.data;
   const statusDot = useHeaderDot(parcelBadgeKind(p?.status));
 
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: qk.parcels.root });
-    void queryClient.invalidateQueries({ queryKey: qk.delegations.root });
-  };
+  const refresh = () => void queryClient.invalidateQueries({ queryKey: qk.parcels.root });
   const onError = (e: unknown) => toast.error(errorMessage(e, t));
 
   const remind = useMutation({ mutationFn: () => parcelsApi.remind(id), onSuccess: () => toast.success(t('parcels.reminded')), onError });
@@ -116,8 +105,6 @@ export function ParcelDetailScreen() {
   const open = isOpenParcel(p.status);
   const deadline = parcelDeadline(p);
   const isMine = sameId(p.receiverId, me.data?.id);
-  const related = p.relatedDelegation;
-  const blockingDefault = activeDefaultOf(delegations.data ?? [], me.data?.id);
   const handOverAt = parseServerDate(p.handOverAt);
   const cancelledAt = parseServerDate(p.cancelledAt);
 
@@ -147,11 +134,6 @@ export function ParcelDetailScreen() {
       actions.push(<Button key="note" className="flex-1" variant="ghost" label={t('parcels.addCancelNote')} onPress={() => setNoteOpen(true)} />);
     }
   }
-
-  // "Không đến nhận được?": my open parcel with nobody collecting it yet.
-  const canAskDelegate = open && isMine && !related;
-  const delegate = () => router.push({ pathname: '/parcels/delegations/new', params: { parcelId: p.id } });
-  const delegateInFooter = canAskDelegate && !blockingDefault && !actions.length;
 
   const moreButton = more.length ? (
     <HeaderIconButton
@@ -213,62 +195,18 @@ export function ParcelDetailScreen() {
     </FloatingCard>
   );
 
-  const footer = delegateInFooter ? (
-    <>
-      <View className="min-w-0 flex-1 gap-0.5">
-        <Text numberOfLines={1} className="text-muted" style={{ fontSize: 11.5, lineHeight: 15 }}>
-          {t('parcels.cantCollect')}
-        </Text>
-        <Text weight="semibold" numberOfLines={2} style={{ fontSize: 13.5, lineHeight: 18 }}>
-          {t('parcels.askColleague')}
-        </Text>
-      </View>
-      <Button testID="parcel-delegate" icon={UserCheckIcon} label={t('parcels.delegate')} onPress={delegate} />
-    </>
-  ) : actions.length ? (
-    actions
-  ) : undefined;
-
   return (
     <ModuleScreen
       header={header(headerContent, moreButton)}
       floating={info}
       floatingScrolls
-      footer={footer}
+      footer={actions.length ? actions : undefined}
       refreshControl={<RefreshControl refreshing={parcel.isRefetching} onRefresh={() => void parcel.refetch()} />}
     >
       {p.attachments.length ? (
         <Card className="gap-2.5 p-3.5">
           <SectionTitle right={`${p.attachments.length}/${MAX_PARCEL_FILES}`}>{t('parcels.photosTitle')}</SectionTitle>
           <PhotoStrip attachments={p.attachments} />
-        </Card>
-      ) : null}
-
-      {open && related ? (
-        <Card className="gap-3 p-3.5">
-          <SectionTitle right={<DelegationBadge status={related.status} dot />}>{t('parcels.delegatedTo')}</SectionTitle>
-          {summaryPerson(related.delegator) ? <PersonRow person={summaryPerson(related.delegator)!} size={40} strong /> : null}
-          <Text className="text-muted" style={{ fontSize: 12, lineHeight: 17 }}>
-            {related.parcelId
-              ? t('parcels.delegationDetailed')
-              : t('parcels.delegationDefault', { from: formatDayMonth(parseServerDate(related.startDate)), to: formatDayMonth(parseServerDate(related.endDate)) })}
-          </Text>
-          {related.status === DelegationStatus.Waiting && related.pendingEndDate ? (
-            <Banner tone="info">{t('parcels.pendingRenew', { date: formatDayMonth(parseServerDate(related.pendingEndDate)) })}</Banner>
-          ) : null}
-        </Card>
-      ) : canAskDelegate && !delegateInFooter ? (
-        <Card className="flex-row items-center gap-3 p-3.5">
-          <RoundIcon icon={UserCheckIcon} tone="wait" />
-          <View className="min-w-0 flex-1 gap-0.5">
-            <Text weight="semibold" style={{ fontSize: 14, lineHeight: 19 }}>
-              {t('parcels.cantCollect')}
-            </Text>
-            <Text className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
-              {blockingDefault ? t('parcels.defaultBlocks') : t('parcels.askColleague')}
-            </Text>
-          </View>
-          {!blockingDefault ? <Button testID="parcel-delegate" size="sm" label={t('parcels.delegate')} onPress={delegate} /> : null}
         </Card>
       ) : null}
 

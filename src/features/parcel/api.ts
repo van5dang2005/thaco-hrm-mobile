@@ -3,7 +3,7 @@ import type { Paginated } from '@/core/api/types';
 import type { ParcelUser } from '@/core/session/userTypes';
 import { appendLocalFile, type LocalFile } from '@/shared/lib/upload';
 
-import type { DelegationDto, DelegationStatus, ParcelDepartment, ParcelDto, ParcelLookupDto, ParcelStats, ParcelStatus } from './types';
+import type { ParcelDepartment, ParcelDto, ParcelLookupDto, ParcelStats, ParcelStatus } from './types';
 
 export type MyParcelsQuery = {
   pageNumber: number;
@@ -12,8 +12,6 @@ export type MyParcelsQuery = {
   statuses?: ParcelStatus[];
   fromDate?: string;
   toDate?: string;
-  /** Only parcels that can still get a new per-parcel delegation. */
-  addDelegation?: boolean;
 };
 
 export type ReceptionQuery = {
@@ -24,14 +22,6 @@ export type ReceptionQuery = {
   departmentId?: string;
   fromDate?: string;
   toDate?: string;
-};
-
-export type DelegationsQuery = {
-  pageNumber: number;
-  pageSize: number;
-  search?: string;
-  status?: DelegationStatus;
-  isDefault?: boolean;
 };
 
 /** Local file picked from the camera / library, sent as multipart. */
@@ -101,22 +91,6 @@ export const parcelsApi = {
   accessibleDepartments: () => parcelApi.get<ParcelDepartment[]>('/api/departments/accessible'),
   searchUsers: (keyword: string) =>
     parcelApi.get<Paginated<ParcelUser>>('/api/users', { query: { searchKeyword: keyword, pageNumber: 1, pageSize: 20 } }),
-};
-
-export const delegationsApi = {
-  list: (q: DelegationsQuery) => parcelApi.get<Paginated<DelegationDto>>('/api/delegations', { query: q }),
-  /** No parcelId = default (time-bound) delegation; dates required and endDate > startDate. */
-  create: (body: { delegatorId: string; parcelId?: string; startDate?: string; endDate?: string; isSendEmail: boolean }) =>
-    parcelApi.post<DelegationDto>('/api/delegations', body),
-  createBulk: (body: { delegatorId: string; parcelIds: string[]; isSendEmail: boolean }) => parcelApi.post<DelegationDto[]>('/api/delegations/bulk', body),
-  edit: (body: { id: string; delegatorId: string; parcelId?: string | null; startDate?: string | null; endDate?: string | null }) =>
-    parcelApi.post<DelegationDto>('/api/delegations/edit', body),
-  accept: (id: string) => parcelApi.post<DelegationDto>(`/api/delegations/${id}/accept`),
-  reject: (id: string) => parcelApi.post<DelegationDto>(`/api/delegations/${id}/reject`),
-  renew: (id: string, newEndDate: string) => parcelApi.post<DelegationDto>(`/api/delegations/${id}/renew`, { newEndDate }),
-  /** Route name is misspelled on the server ("teminate"); keep it. */
-  terminate: (id: string, newEndDate: string) => parcelApi.patch<DelegationDto>(`/api/delegations/${id}/teminate`, { newEndDate }),
-  remove: (id: string) => parcelApi.delete<void>(`/api/delegations/${id}`),
 };
 
 /**

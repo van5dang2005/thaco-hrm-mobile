@@ -10,7 +10,6 @@ import { useSessionStore } from '@/core/session/sessionStore';
 import { useParcelMe } from '@/core/session/useMe';
 import { parcelPerson, sameId, type ParcelUser, type PersonOf } from '@/core/session/userTypes';
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { formatDayMonth, parseServerDate } from '@/core/time/vn';
 import { cn } from '@/shared/lib/cn';
 import { goBack } from '@/shared/lib/navigation';
 import { Avatar } from '@/shared/ui/Avatar';
@@ -36,37 +35,20 @@ import { UserPicker } from '@/shared/ui/UserPicker';
 
 import { parcelsApi } from '../api';
 import { parcelIconTone } from '../components/ParcelCard';
-import { delegationAllowsHandover, handoverEligibility, isOpenParcel, senderTitle, type Eligibility } from '../logic';
-import type { ParcelDto, RelatedUserSummary } from '../types';
+import { isOpenParcel, senderTitle } from '../logic';
+import type { ParcelDto } from '../types';
 
-type Role = 'owner' | 'default' | 'detailed';
-type Candidate = Person & { role: Role };
-
-const summaryPerson = (u: RelatedUserSummary): Person => ({
-  id: u.id,
-  name: u.fullName ?? u.username,
-  code: u.employeeCode,
-  department: u.departmentName,
-  avatarUrl: u.avatarUrl,
-});
-
-/** Who can collect these parcels: each receiver, then delegates whose delegation is in force. */
-function candidatesOf(parcels: ParcelDto[]): Candidate[] {
-  const list: Candidate[] = [];
-  const push = (c: Candidate) => {
-    if (!list.some((x) => sameId(x.id, c.id))) list.push(c);
-  };
-  parcels.forEach((p) =>
-    push({ id: p.receiverId, name: p.receiverFullName, code: p.receiverCode, department: p.departmentName, avatarUrl: p.receiverAvatarUrl, role: 'owner' }),
-  );
+/** Who can collect these parcels: each receiver. */
+function candidatesOf(parcels: ParcelDto[]): Person[] {
+  const list: Person[] = [];
   parcels.forEach((p) => {
-    const d = p.relatedDelegation;
-    if (d?.delegator && delegationAllowsHandover(d)) push({ ...summaryPerson(d.delegator), role: d.parcelId ? 'detailed' : 'default' });
+    if (list.some((x) => sameId(x.id, p.receiverId))) return;
+    list.push({ id: p.receiverId, name: p.receiverFullName, code: p.receiverCode, department: p.departmentName, avatarUrl: p.receiverAvatarUrl });
   });
   return list;
 }
 
-/** "Bàn giao bưu phẩm" (6h): who collects, as what, then hand over one or many parcels (bulk-handover). */
+/** "Bàn giao bưu phẩm" (6h): who collects, then hand over one or many parcels (bulk-handover). Only the receiver may collect. */
 export function HandoverScreen() {
   const { t } = useTranslation();
   const { fg, text2 } = useHeaderColors();
@@ -94,8 +76,7 @@ export function HandoverScreen() {
   const single = owners.length === 1 ? parcels[0] : null;
   const candidates = candidatesOf(chosen.filter((p) => isOpenParcel(p.status)));
 
-  const results = person ? chosen.map((p) => ({ parcel: p, eligibility: handoverEligibility(p, person.id) })) : [];
-  const ineligible = results.filter((r) => r.eligibility.kind === 'none').map((r) => r.parcel);
+  const ineligible = person ? chosen.filter((p) => !sameId(p.receiverId, person.id)) : [];
   const canSubmit = !!person && chosen.length > 0 && parcels.length === ids.length && !ineligible.length && !closed.length;
 
   const submit = useMutation({
@@ -108,7 +89,6 @@ export function HandoverScreen() {
     onSuccess: (done) => {
       toast.success(t('reception.handedOver', { count: done.length }));
       void queryClient.invalidateQueries({ queryKey: qk.parcels.root });
-      void queryClient.invalidateQueries({ queryKey: qk.delegations.root });
       goBack('/parcels/reception');
     },
     onError: (e) => toast.error(errorMessage(e, t)),
@@ -239,7 +219,7 @@ export function HandoverScreen() {
             ) : null}
           </View>
           {person ? (
-            <ReceiverCard person={person} results={results} ineligible={ineligible} />
+            <ReceiverCard person={person} total={chosen.length} ineligible={ineligible} />
           ) : (
             <Card>
               <Text className="px-3.5 pt-3 text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
@@ -253,12 +233,7 @@ export function HandoverScreen() {
                   size={40}
                   onPress={() => setPerson(c)}
                   className={cn('min-h-[56px] px-3.5 py-2.5', index > 0 && 'border-t border-line-2')}
-                  trailing={
-                    <StatusBadge
-                      kind={c.role === 'owner' ? 'off' : 'ok'}
-                      label={t(c.role === 'owner' ? 'reception.roleOwner' : c.role === 'default' ? 'reception.roleDefault' : 'reception.roleDetailed')}
-                    />
-                  }
+                  trailing={<StatusBadge kind="off" label={t('reception.roleOwner')} />}
                 />
               ))}
               <Pressable
@@ -295,59 +270,33 @@ export function HandoverScreen() {
   );
 }
 
-type Result = { parcel: ParcelDto; eligibility: Eligibility };
-
 /**
  * Chosen receiver (6h): person row, then the "tư cách nhận" box inside the same card. Green ring when
- * every chosen parcel can be collected; red ring, red box and a locked submit button otherwise.
+ * the person is the receiver of every chosen parcel; red ring, red box and a locked submit button otherwise.
  */
-function ReceiverCard({ person, results, ineligible }: { person: Person; results: Result[]; ineligible: ParcelDto[] }) {
+function ReceiverCard({ person, total, ineligible }: { person: Person; total: number; ineligible: ParcelDto[] }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
   const text = 'text-sub leading-[19px]';
   const blocked = ineligible.length > 0;
-
-  // One line per distinct way of collecting (directly, or through a given owner's delegation).
-  const lines = new Map<string, string[]>();
-  results.forEach(({ parcel, eligibility: e }) => {
-    let key: string;
-    let parts: string[];
-    if (e.kind === 'direct') {
-      key = 'direct';
-      parts = [t('reception.asDirect'), `${person.name} ${t('reception.asDirectText')}`];
-    } else if (e.kind === 'default') {
-      key = `default:${e.delegation.id}`;
-      const from = formatDayMonth(parseServerDate(e.delegation.startDate));
-      const to = formatDayMonth(parseServerDate(e.delegation.endDate));
-      parts = [t('reception.asDefault'), t('reception.asDefaultText', { owner: parcel.receiverFullName, from, to })];
-    } else if (e.kind === 'detailed') {
-      key = `detailed:${parcel.receiverId}`;
-      parts = [t('reception.asDetailed'), t('reception.asDetailedText', { owner: parcel.receiverFullName })];
-    } else {
-      return;
-    }
-    if (!lines.has(key)) lines.set(key, parts);
-  });
 
   return (
     <Card className="gap-3 p-3.5" style={{ borderWidth: 1.5, borderColor: blocked ? colors['danger-border'] : colors['success-border'] }}>
       <PersonRow testID="handover-person" person={person} size={44} strong />
       {blocked ? (
         <Banner tone="danger" className="rounded-[12px] px-3 py-2.5" testID="handover-eligibility">
-          {ineligible.length === results.length ? t('reception.notEligible') : t('reception.notEligibleSome', { list: ineligible.map((p) => p.trackingNumber).join(', ') })}
+          {ineligible.length === total ? t('reception.notEligible') : t('reception.notEligibleSome', { list: ineligible.map((p) => p.trackingNumber).join(', ') })}
         </Banner>
       ) : (
         <Banner tone="success" className="rounded-[12px] px-3 py-2.5" testID="handover-eligibility">
           <View className="gap-1">
-            {[...lines.values()].map(([title, rest]) => (
-              <Text key={title + rest} className={cn(text, 'text-success-deep')}>
-                <Text weight="bold" className={cn(text, 'text-success-deep')}>
-                  {title}
-                </Text>
-                {` ${rest}`}
+            <Text className={cn(text, 'text-success-deep')}>
+              <Text weight="bold" className={cn(text, 'text-success-deep')}>
+                {t('reception.asDirect')}
               </Text>
-            ))}
-            {results.length > 1 ? <Text className={cn(text, 'text-success-deep')}>{t('reception.allEligible', { count: results.length })}</Text> : null}
+              {` ${person.name} ${t('reception.asDirectText')}`}
+            </Text>
+            {total > 1 ? <Text className={cn(text, 'text-success-deep')}>{t('reception.allEligible', { count: total })}</Text> : null}
           </View>
         </Banner>
       )}

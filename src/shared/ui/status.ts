@@ -9,14 +9,10 @@ export type BadgeKind = 'wait' | 'warn' | 'danger' | 'ok' | 'off' | 'live';
 /** ParcelStatus: 1 Waiting, 2 Due, 3 Overdue, 4 Cancelled, 5 HandedOver. */
 const parcelKinds: Record<number, BadgeKind> = { 1: 'wait', 2: 'warn', 3: 'danger', 4: 'off', 5: 'ok' };
 
-/** DelegationStatus: 1 Expired, 2 DueSoon, 3 Active, 4 Rejected, 5 Waiting (note the reversed numbering). */
-const delegationKinds: Record<number, BadgeKind> = { 1: 'off', 2: 'warn', 3: 'ok', 4: 'danger', 5: 'wait' };
-
 /** BookingStatus: 1 Waiting, 2 Approved, 3 Rejected, 4 Finished, 5 Canceled. */
 const bookingKinds: Record<number, BadgeKind> = { 1: 'wait', 2: 'ok', 3: 'danger', 4: 'off', 5: 'off' };
 
 export const parcelBadgeKind = (status?: number | null): BadgeKind => parcelKinds[status ?? 0] ?? 'off';
-export const delegationBadgeKind = (status?: number | null): BadgeKind => delegationKinds[status ?? 0] ?? 'off';
 export const bookingBadgeKind = (status?: number | null): BadgeKind => bookingKinds[status ?? 0] ?? 'off';
 
 const BOOKING_APPROVED = 2;
