@@ -1,8 +1,10 @@
 import * as SecureStore from 'expo-secure-store';
 
-import type { ServiceId } from '@/core/api/ApiError';
-
-export type TokenPair = { token: string; refreshToken: string };
+/**
+ * The THACO SSO (Keycloak) pair: one access token for every back-end, refreshed against Keycloak.
+ * `receivedAt`: device time the pair arrived (set when stored), to time the refresh token on the device's own clock.
+ */
+export type TokenPair = { token: string; refreshToken: string; receivedAt?: number };
 
 // SecureStore values above ~2KB can be rejected on Android; JWTs with many claims exceed that.
 const CHUNK_SIZE = 1800;
@@ -28,34 +30,36 @@ async function readChunked(key: string): Promise<string | null> {
   return parts.join('');
 }
 
-const storageKey = (service: ServiceId) => `thaco.session.${service}`;
+const STORAGE_KEY = 'thaco.session.sso';
 
-const memory: Record<ServiceId, TokenPair | null> = { parcel: null, room: null };
+/** One pair per back-end, from app versions before SSO; dropped on the next launch. */
+const LEGACY_KEYS = ['thaco.session.parcel', 'thaco.session.room'];
 
-/** Two independent token sets (one per back-end), cached in memory and persisted in SecureStore. */
+let memory: TokenPair | null = null;
+
+/** The signed-in user's SSO pair, cached in memory and persisted in SecureStore. */
 export const tokenStore = {
-  get(service: ServiceId): TokenPair | null {
-    return memory[service];
+  get(): TokenPair | null {
+    return memory;
   },
 
-  async set(service: ServiceId, pair: TokenPair | null) {
-    memory[service] = pair;
-    await writeChunked(storageKey(service), pair ? JSON.stringify(pair) : null);
+  async set(pair: TokenPair | null) {
+    memory = pair && { ...pair, receivedAt: pair.receivedAt ?? Date.now() };
+    await writeChunked(STORAGE_KEY, memory ? JSON.stringify(memory) : null);
   },
 
-  async restore(): Promise<Record<ServiceId, TokenPair | null>> {
-    for (const service of ['parcel', 'room'] as const) {
-      try {
-        const raw = await readChunked(storageKey(service));
-        memory[service] = raw ? (JSON.parse(raw) as TokenPair) : null;
-      } catch {
-        memory[service] = null;
-      }
+  async restore(): Promise<TokenPair | null> {
+    try {
+      const raw = await readChunked(STORAGE_KEY);
+      memory = raw ? (JSON.parse(raw) as TokenPair) : null;
+    } catch {
+      memory = null;
     }
-    return { ...memory };
+    if (!memory) await Promise.all(LEGACY_KEYS.map((key) => writeChunked(key, null).catch(() => undefined)));
+    return memory;
   },
 
   async clear() {
-    await Promise.all([this.set('parcel', null), this.set('room', null)]);
+    await this.set(null);
   },
 };

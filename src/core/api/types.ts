@@ -22,15 +22,6 @@ export function flattenPages<T>(pages: Paginated<T>[] | undefined): T[] {
   return pages?.flatMap((page) => page.items) ?? [];
 }
 
-/** POST /api/auth/login | refresh-token, identical on both services. */
-export type AuthResponse = {
-  token: string;
-  refreshToken: string;
-  username: string;
-  email: string;
-  roles: string[];
-};
-
 export type LoginRequest = { username: string; password: string; domain: string };
 
 /** GET /api/menus item (parcel service). Results are filtered by the caller's Menu permissions. */

@@ -9,16 +9,15 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient, queryPersister } from '@/core/query/queryClient';
-import { onSessionExpired, restoreSession } from '@/core/session/session';
+import { restoreSession } from '@/core/session/session';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { monoAssets, uiAssets } from '@/core/theme/fonts';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
-import { toast, ToastHost } from '@/shared/ui/Toast';
+import { ToastHost } from '@/shared/ui/Toast';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -34,13 +33,8 @@ const startupFonts = { ...monoAssets, ...uiAssets };
 
 function RootNavigator() {
   const { scheme, colors } = useTheme();
-  const { t } = useTranslation();
   const status = useSessionStore((s) => s.status);
   const signedIn = status === 'signedIn';
-
-  useEffect(() => {
-    onSessionExpired(() => toast.info(t('errors.UNAUTHORIZED')));
-  }, [t]);
 
   const navigationTheme = useMemo(() => {
     const base = scheme === 'dark' ? DarkTheme : DefaultTheme;

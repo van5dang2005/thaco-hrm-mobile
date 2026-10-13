@@ -1,11 +1,12 @@
 {
   "cli": {
     "version": ">= 16.0.0",
-    "appVersionSource": "local"
+    "appVersionSource": "remote"
   },
   "build": {
     "base": {
-      "node": "24.8.0"
+      "node": "24.8.0",
+      "autoIncrement": true
     },
     "development": {
       "extends": "base",

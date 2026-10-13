@@ -5,6 +5,7 @@ import type { MenuDto, Paginated } from '@/core/api/types';
 import { qk } from '@/core/query/keys';
 
 import { isAdministrator, useSessionStore } from './sessionStore';
+import { useParcelMe } from './useMe';
 
 /** Features gated by server-side permissions. */
 export type Capability = 'parcel.reception';
@@ -30,7 +31,9 @@ export function useParcelMenus() {
 
 export function useCapabilities() {
   const menus = useParcelMenus();
-  const parcelRoles = useSessionStore((s) => s.roles.parcel);
+  // Roles come from the service's own profile: the SSO token carries none of this app's roles.
+  const parcelMe = useParcelMe();
+  const parcelRoles = parcelMe.data?.roles ?? [];
   const parcelConnected = useSessionStore((s) => s.connected.parcel);
 
   const menuUrls = new Set((menus.data?.items ?? []).filter((m) => m.isActive !== false).map((m) => normalize(m.url)));
@@ -43,5 +46,5 @@ export function useCapabilities() {
     }
   };
 
-  return { has, isLoading: menus.isLoading };
+  return { has, isLoading: menus.isLoading || parcelMe.isLoading };
 }

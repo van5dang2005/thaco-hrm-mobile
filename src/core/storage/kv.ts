@@ -13,10 +13,15 @@ export const kvKeys = {
   notificationPopups: 'settings.notificationPopups',
   lastDomain: 'auth.lastDomain',
   lastUsername: 'auth.lastUsername',
+  /** `{ id, username, email }` of the Keycloak account, to re-read `myApps` at launch. */
+  ssoAccount: 'auth.ssoAccount',
+  /** Apps the THACO apps portal grants the signed-in account (`MyApp[]`). */
+  myApps: 'auth.myApps',
   /** "Ghi nhớ đăng nhập": prefill the login form with `rememberedUsername`. */
   rememberLogin: 'auth.rememberLogin',
   rememberedUsername: 'auth.rememberedUsername',
-  biometricEnabled: 'auth.biometricEnabled',
+  /** `{ username, domain, sessionId }`: the account Face ID / fingerprint signs in, and the Keycloak session of its offline token. Set only while biometric sign-in is on. */
+  biometricAccount: 'auth.biometricSession',
   lastAreaId: 'rooms.lastAreaId',
 } as const;
 

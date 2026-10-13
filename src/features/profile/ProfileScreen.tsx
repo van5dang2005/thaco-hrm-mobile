@@ -9,8 +9,8 @@ import { env } from '@/core/config/env';
 import { errorMessage } from '@/core/errors/errorMessage';
 import { setLanguage, type Language } from '@/core/i18n';
 import { getNotificationPermission, openNotificationSettings, requestNotificationPermission, type NotificationPermission } from '@/core/notifications/permission';
-import { type BiometricKind, biometricKind, confirmBiometric, disableBiometric, enableBiometric, isBiometricEnabled } from '@/core/session/biometric';
-import { signOut, verifyCredentials } from '@/core/session/session';
+import { type BiometricKind, biometricKind, disableBiometric, isBiometricEnabled } from '@/core/session/biometric';
+import { enableBiometricSignIn, signOut } from '@/core/session/session';
 import { useProfile } from '@/core/session/useMe';
 import { kv, kvKeys } from '@/core/storage/kv';
 import { useTheme } from '@/core/theme/ThemeProvider';
@@ -195,7 +195,7 @@ export function ProfileScreen() {
   const queryClient = useQueryClient();
   const profile = useProfile();
   const notifications = useNotificationSetting();
-  const [biometricOn, setBiometricOn] = useState(isBiometricEnabled);
+  const [biometricOn, setBiometricOn] = useState(() => isBiometricEnabled(signedInAccount()));
   const [biometric, setBiometric] = useState<BiometricKind>('none');
   const [refreshing, setRefreshing] = useState(false);
   const [sheet, setSheet] = useState<'language' | 'layout' | 'biometric' | null>(null);
@@ -356,18 +356,20 @@ export function ProfileScreen() {
   );
 }
 
+/** The signed-in account as typed on the login form (Face ID / fingerprint is set up per account). */
+const signedInAccount = () => ({ username: kv.getString(kvKeys.lastUsername) ?? '', domain: kv.getString(kvKeys.lastDomain) ?? '' });
+
 /**
- * Turning biometric sign-in on from Profile: biometric sign-in replays the domain password, which the
- * app does not keep, so ask for it once, check it with the server, confirm Face ID / fingerprint, then
- * store it behind biometrics (SecureStore) like the login screen does.
+ * Turning biometric sign-in on from Profile: Face ID / fingerprint opens an offline token that only the
+ * password can obtain, and the app does not keep the password, so ask for it once (Keycloak checks it),
+ * then store the token behind biometrics (SecureStore) like the login screen does.
  */
 function BiometricSheet({ visible, onClose, onEnabled, title }: { visible: boolean; onClose: () => void; onEnabled: () => void; title: string }) {
   const { t } = useTranslation();
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const username = kv.getString(kvKeys.lastUsername) ?? '';
-  const domain = kv.getString(kvKeys.lastDomain) ?? '';
+  const { username, domain } = signedInAccount();
 
   const close = () => {
     setPassword('');
@@ -380,9 +382,9 @@ function BiometricSheet({ visible, onClose, onEnabled, title }: { visible: boole
     setError(null);
     try {
       const credentials = { username, password, domain };
-      await verifyCredentials(credentials);
-      if (!(await confirmBiometric(t('auth.biometricPrompt'), t('common.cancel')))) return;
-      await enableBiometric(credentials, t('auth.biometricPrompt'));
+      const outcome = await enableBiometricSignIn(credentials, t('auth.biometricPrompt'), t('common.cancel'));
+      if (outcome === 'failed') setError(t('auth.biometricFailed'));
+      if (outcome !== 'enabled') return;
       toast.success(t('profile.biometricEnabled'));
       setPassword('');
       onEnabled();

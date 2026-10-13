@@ -1,8 +1,9 @@
 import { env } from '@/core/config/env';
+import { refreshSso } from '@/core/session/sso';
 import { tokenStore } from '@/core/session/tokenStore';
 
 import { ApiError, type ServiceId } from './ApiError';
-import type { AuthResponse } from './types';
+import { fetchWithTimeout } from './fetchWithTimeout';
 
 type QueryPrimitive = string | number | boolean | Date;
 export type QueryValue = QueryPrimitive | QueryPrimitive[] | null | undefined;
@@ -22,7 +23,7 @@ type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 let unauthorizedHandler: ((service: ServiceId) => void) | null = null;
 
-/** Called once a refresh attempt fails; the session layer signs the user out. */
+/** Called once Keycloak refuses the refresh token (400/401); the session layer signs the user out. */
 export function setUnauthorizedHandler(handler: (service: ServiceId) => void) {
   unauthorizedHandler = handler;
 }
@@ -42,19 +43,6 @@ export function buildUrl(baseUrl: string, path: string, query?: Query) {
   return `${baseUrl}${path}${params.length ? `?${params.join('&')}` : ''}`;
 }
 
-async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number, external?: AbortSignal) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const forward = () => controller.abort();
-  external?.addEventListener('abort', forward);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-    external?.removeEventListener('abort', forward);
-  }
-}
-
 async function toApiError(service: ServiceId, response: Response): Promise<ApiError> {
   let body: Record<string, unknown> | null = null;
   try {
@@ -72,41 +60,6 @@ async function toApiError(service: ServiceId, response: Response): Promise<ApiEr
   return new ApiError({ service, status: response.status, errorCode, message, details: body?.details ?? body?.errors });
 }
 
-const refreshing: Partial<Record<ServiceId, Promise<boolean>>> = {};
-
-/** Single-flight refresh per service: concurrent 401s wait for the same refresh call. */
-function refreshTokens(service: ServiceId, baseUrl: string): Promise<boolean> {
-  const inFlight = refreshing[service];
-  if (inFlight) return inFlight;
-  const current = tokenStore.get(service);
-  if (!current?.refreshToken) return Promise.resolve(false);
-
-  const task = (async () => {
-    try {
-      const response = await fetchWithTimeout(
-        `${baseUrl}/api/auth/refresh-token`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${current.token}` },
-          body: JSON.stringify({ refreshToken: current.refreshToken }),
-        },
-        env.requestTimeoutMs,
-      );
-      if (!response.ok) return false;
-      const data = (await response.json()) as AuthResponse;
-      if (!data?.token) return false;
-      await tokenStore.set(service, { token: data.token, refreshToken: data.refreshToken || current.refreshToken });
-      return true;
-    } catch {
-      return false;
-    } finally {
-      delete refreshing[service];
-    }
-  })();
-  refreshing[service] = task;
-  return task;
-}
-
 export type ApiClient = ReturnType<typeof createApiClient>;
 
 export function createApiClient(service: ServiceId, baseUrl: string) {
@@ -122,7 +75,7 @@ export function createApiClient(service: ServiceId, baseUrl: string) {
     }
 
     const useAuth = options.auth !== false;
-    const tokens = useAuth ? tokenStore.get(service) : null;
+    const tokens = useAuth ? tokenStore.get() : null;
     if (tokens) headers.Authorization = `Bearer ${tokens.token}`;
 
     let response: Response;
@@ -134,7 +87,11 @@ export function createApiClient(service: ServiceId, baseUrl: string) {
     }
 
     if (response.status === 401 && useAuth && tokens && !isRetry) {
-      if (await refreshTokens(service, baseUrl)) return request<T>(method, path, options, true);
+      // A concurrent request may already have refreshed (SSO tokens live ~5 minutes); retry with that one.
+      const outcome = tokenStore.get()?.token !== tokens.token ? 'refreshed' : await refreshSso();
+      if (outcome === 'refreshed') return request<T>(method, path, options, true);
+      // Keycloak unreachable or failing: keep the session and report a transport error the screen can retry.
+      if (outcome === 'unavailable') throw new ApiError({ service, status: 0, errorCode: 'NETWORK', message: 'SSO token refresh unavailable' });
       unauthorizedHandler?.(service);
     }
 
@@ -162,9 +119,9 @@ export function createApiClient(service: ServiceId, baseUrl: string) {
       request<T>('POST', path, { ...options, form, timeoutMs: options?.timeoutMs ?? 60_000 }),
     putForm: <T>(path: string, form: FormData, options?: Omit<RequestOptions, 'body' | 'form'>) =>
       request<T>('PUT', path, { ...options, form, timeoutMs: options?.timeoutMs ?? 60_000 }),
-    /** Bearer header for this service, for downloads / image requests outside fetch. */
+    /** Bearer header, for downloads / image requests outside fetch. */
     authHeaders(): Record<string, string> {
-      const tokens = tokenStore.get(service);
+      const tokens = tokenStore.get();
       return tokens ? { Authorization: `Bearer ${tokens.token}` } : {};
     },
     url: (path: string, query?: Query) => buildUrl(baseUrl, path, query),

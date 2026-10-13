@@ -29,6 +29,7 @@ Cấu hình app nằm ở `app.config.ts`. Biến môi trường được quản
 | `APP_ENV` | development / preview / production; đổi tên app thành "THACO HRM (Dev)" / "(Preview)" / "THACO HRM". Khi build, `eas.json` tự đặt theo profile |
 | `EXPO_PUBLIC_PARCEL_API_URL`, `EXPO_PUBLIC_ROOM_API_URL` | Gốc URL hai back-end (không có `/api`). Back-end .NET chạy local: `http://localhost:5211` (bưu phẩm), `http://localhost:5113` (phòng họp) |
 | `EXPO_PUBLIC_PAYTIME_URL`, `EXPO_PUBLIC_PAYTIME_IOS_STORE_URL`, `EXPO_PUBLIC_PAYTIME_ANDROID_STORE_URL` | Mở app THACO Paytime, hoặc trang cửa hàng nếu chưa cài |
+| `EXPO_PUBLIC_SSO_ISSUER`, `EXPO_PUBLIC_SSO_CLIENT_ID`, `EXPO_PUBLIC_SSO_SCOPES` | THACO SSO (Keycloak). Form đăng nhập luôn gửi tài khoản tới realm này (không mở trình duyệt), nên `CLIENT_ID` bắt buộc: client public, bật *Direct access grants*. Mặc định issuer `https://sso.thaco.com.vn/realms/thacogroup`, scope `openid profile email` |
 | `EXPO_PUBLIC_IT_SUPPORT_PHONE` | Số hotline IT ở màn đăng nhập (tùy chọn) |
 
 `EXPO_PUBLIC_*` được nhúng thẳng vào app nên không để bí mật trong đó. Khi tạo biến trên expo.dev, chọn visibility **Plain text** hoặc **Sensitive**: build local không đọc được biến **Secret**.
@@ -118,3 +119,4 @@ Phát hiện khi đọc mã nguồn back-end, app đang làm vòng qua:
 - `BookingDto.approvalHistory` luôn rỗng; app đọc lịch sử duyệt từ `GET /api/bookingapprovals/booking/{id}`.
 - `my-approvals` gộp theo nhóm và không trả cấp duyệt (`approvalStep` null).
 - Chưa kiểm chứng: tìm người dùng (`GET /api/users?searchKeyword=`) có bỏ dấu không.
+- Chưa kiểm chứng với Keycloak thật: client mobile bật *Direct access grants*; realm bật *Login with email* (app gửi `tên@domain` khi chọn domain, MSNV khi chọn "Mã nhân viên"); token có audience `account` (khi đăng nhập app xác nhận token bằng `GET …/realms/thacogroup/account`, không gọi back-end); token mang client role mà `Policy` của mỗi back-end yêu cầu: bưu phẩm `PARCEL_MANAGEMENT_WEB` (mặc định trong `docker-compose.yml`), phòng họp `BOOKING_ROOM_WEB` (staging `MEETING_ROOM_WEB`). Chạy back-end bưu phẩm local bằng `appsettings.json` thì `Policy:Url` / `Policy:Client` trống nên token SSO bị từ chối: cần đặt `Policy__Url=https://sso.thaco.com.vn/realms/thacogroup`, `Policy__Client` và `Policy__Roles__0` (`PARCEL_MANAGEMENT_WEB`).

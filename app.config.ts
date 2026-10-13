@@ -9,8 +9,16 @@ type AppEnv = 'development' | 'preview' | 'production';
 
 const appEnv: AppEnv = (['development', 'preview', 'production'] as const).find((v) => v === process.env.APP_ENV) ?? 'development';
 
+/**
+ * User-facing version (iOS CFBundleShortVersionString, Android versionName), from EXPO_PUBLIC_APP_VERSION
+ * on expo.dev, which the app also shows. Build numbers (ios.buildNumber, android.versionCode) are not
+ * set here: EAS keeps them and bumps them on every build (`appVersionSource: "remote"` + `autoIncrement`).
+ */
+const version = process.env.EXPO_PUBLIC_APP_VERSION?.trim() || '0.0.0';
+if (!/^\d+(\.\d+){0,2}$/.test(version)) throw new Error(`EXPO_PUBLIC_APP_VERSION must look like 2.4.0, got "${version}"`);
+
 /** Non-production builds are labelled on the home screen so testers can tell them apart. */
-const nameSuffix: Record<AppEnv, string> = { development: ' (Dev)', preview: ' (Beta)', production: '' };
+const nameSuffix: Record<AppEnv, string> = { development: '(Dev) ', preview: '(Beta) ', production: '' };
 
 const cameraPermission = 'THACO HRM dùng camera để chụp ảnh bưu phẩm khi tiếp nhận.';
 const photosPermission = 'THACO HRM cần truy cập thư viện ảnh để đính kèm ảnh bưu phẩm.';
@@ -18,10 +26,10 @@ const faceIdPermission = 'THACO HRM dùng Face ID để đăng nhập nhanh.';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: `${nameSuffix[appEnv]} THACO HRM`,
+  name: `${nameSuffix[appEnv]}THACO HRM`,
   slug: 'thaco-hrm-mobile',
   owner: 'nguyenvandang',
-  version: '2.4.0',
+  version,
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'thacohrm',

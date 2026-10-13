@@ -5,14 +5,15 @@ import { setStatusBarStyle } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
+import { Alert, AppState, KeyboardAvoidingView, Linking, type NativeEventSubscription, Platform, Pressable, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { env, loginDomains } from '@/core/config/env';
 import { errorMessage } from '@/core/errors/errorMessage';
 import { currentLanguage, setLanguage } from '@/core/i18n';
-import { biometricKind, enableBiometric, isBiometricEnabled, readBiometricCredentials, type BiometricKind } from '@/core/session/biometric';
-import { signIn } from '@/core/session/session';
+import { biometricAccount, biometricKind, type BiometricKind, type BiometricSession, isBiometricEnabled, unlockBiometric } from '@/core/session/biometric';
+import { enableBiometricSignIn, signIn, signInWithBiometric } from '@/core/session/session';
+import { useSessionStore } from '@/core/session/sessionStore';
 import { kv, kvKeys } from '@/core/storage/kv';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { images, WORDMARK_RATIO } from '@/shared/assets';
@@ -51,6 +52,12 @@ import { loginSchema, type LoginForm } from './loginSchema';
 /** "Ghi nhớ đăng nhập" is on unless the user turned it off. */
 const rememberedByDefault = () => kv.getBoolean(kvKeys.rememberLogin) !== false;
 
+/** Last used login domain while it is still offered. */
+const lastDomain = () => {
+  const last = kv.getString(kvKeys.lastDomain);
+  return loginDomains.find((value) => value === last) ?? loginDomains[0];
+};
+
 /** Đăng nhập (6a): blue header with the portal title, a white form card over it, a security note and the footer. */
 export function LoginScreen() {
   const { t } = useTranslation();
@@ -62,13 +69,16 @@ export function LoginScreen() {
   const [domainOpen, setDomainOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [biometric, setBiometric] = useState<BiometricKind>('none');
+  const [biometricOn, setBiometricOn] = useState(() => isBiometricEnabled());
+  const unlocking = useRef(false);
   const [busy, setBusy] = useState(false);
   const [remember, setRemember] = useState(rememberedByDefault);
+  const sessionExpired = useSessionStore((s) => s.signOutReason === 'expired');
 
   const { control, handleSubmit, setValue, formState } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      domain: kv.getString(kvKeys.lastDomain) ?? loginDomains[0],
+      domain: lastDomain(),
       username: rememberedByDefault() ? (kv.getString(kvKeys.rememberedUsername) ?? kv.getString(kvKeys.lastUsername) ?? '') : '',
       password: '',
     },
@@ -76,7 +86,29 @@ export function LoginScreen() {
   const domain = useWatch({ control, name: 'domain' });
 
   useEffect(() => {
-    void biometricKind().then(setBiometric);
+    let cancelled = false;
+    let subscription: NativeEventSubscription | undefined;
+    void biometricKind().then((kind) => {
+      if (cancelled) return;
+      setBiometric(kind);
+      // Ask for Face ID / fingerprint right away at launch or after an expired session, not after signing out by hand.
+      if (kind === 'none' || !isBiometricEnabled() || useSessionStore.getState().signOutReason === 'user') return;
+      if (AppState.currentState !== 'background') {
+        void onBiometric();
+        return;
+      }
+      // The session expired while the app was in the background, where no prompt can show: wait until it is back.
+      subscription = AppState.addEventListener('change', (state) => {
+        if (state !== 'active') return;
+        subscription?.remove();
+        void onBiometric();
+      });
+    });
+    return () => {
+      cancelled = true;
+      subscription?.remove();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on mount
   }, []);
 
   useFocusEffect(
@@ -86,20 +118,53 @@ export function LoginScreen() {
     }, [scheme]),
   );
 
-  const finishSignIn = async (values: LoginForm, offerBiometric: boolean) => {
+  /** After a password sign-in: offer biometric sign-in for this account, moving it over from another one if needed. */
+  const offerBiometric = (values: LoginForm) => {
+    if (biometric === 'none' || isBiometricEnabled(values)) return;
+    const previous = biometricAccount();
+    const enable = async () => {
+      try {
+        const outcome = await enableBiometricSignIn(values, t('auth.biometricPrompt'), t('common.cancel'));
+        if (outcome === 'enabled') toast.success(t('profile.biometricEnabled'));
+        else if (outcome === 'failed') toast.error(t('auth.biometricFailed'));
+      } catch (error) {
+        toast.error(errorMessage(error, t));
+      }
+    };
+    Alert.alert(t('auth.enableBiometricTitle'), previous ? t('auth.enableBiometricReplace', { account: previous.username }) : t('auth.enableBiometricMessage'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('auth.enableBiometricAccept'), onPress: () => void enable() },
+    ]);
+  };
+
+  const rememberUsername = (username: string) => {
+    kv.set(kvKeys.rememberLogin, remember);
+    if (remember) kv.set(kvKeys.rememberedUsername, username.trim());
+    else kv.remove(kvKeys.rememberedUsername);
+  };
+
+  const onSubmit = async (values: LoginForm) => {
     setSubmitError(null);
     setBusy(true);
     try {
-      const { failed } = await signIn(values);
-      kv.set(kvKeys.rememberLogin, remember);
-      if (remember) kv.set(kvKeys.rememberedUsername, values.username.trim());
-      else kv.remove(kvKeys.rememberedUsername);
-      failed.forEach(({ service }) => toast.info(t('auth.partial', { service: t(`services.${service}`) })));
-      if (offerBiometric && biometric !== 'none' && !isBiometricEnabled()) {
-        Alert.alert(t('auth.enableBiometricTitle'), t('auth.enableBiometricMessage'), [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('auth.enableBiometricAccept'), onPress: () => void enableBiometric(values, t('auth.biometricPrompt')).catch(() => undefined) },
-        ]);
+      await signIn(values);
+      rememberUsername(values.username);
+      offerBiometric(values);
+    } catch (error) {
+      setSubmitError(errorMessage(error, t));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const finishBiometric = async (session: BiometricSession) => {
+    setBusy(true);
+    try {
+      if ((await signInWithBiometric(session)) === 'signedIn') {
+        rememberUsername(session.account.username);
+      } else {
+        setBiometricOn(false);
+        setSubmitError(t('auth.biometricExpired'));
       }
     } catch (error) {
       setSubmitError(errorMessage(error, t));
@@ -109,21 +174,28 @@ export function LoginScreen() {
   };
 
   const onBiometric = async () => {
-    if (!isBiometricEnabled()) {
-      Alert.alert(t('auth.title'), t('auth.biometricUnavailable'));
-      return;
-    }
+    // One prompt at a time: Android rejects a second one while the first is open.
+    if (busy || unlocking.current || !isBiometricEnabled()) return;
+    unlocking.current = true;
+    setSubmitError(null);
     try {
-      const credentials = await readBiometricCredentials(t('auth.biometricPrompt'));
-      if (credentials) await finishSignIn(credentials, false);
-    } catch {
-      // User cancelled the biometric prompt.
+      const unlock = await unlockBiometric(t('auth.biometricPrompt'));
+      if (unlock.status === 'ok') {
+        await finishBiometric(unlock);
+      } else if (unlock.status === 'invalidated') {
+        setBiometricOn(false);
+        setSubmitError(t('auth.biometricInvalidated'));
+      } else if (unlock.status === 'failed') {
+        setSubmitError(t('auth.biometricFailed'));
+      }
+    } finally {
+      unlocking.current = false;
     }
   };
 
   const contactIt = () => (env.itSupportPhone ? void Linking.openURL(`tel:${env.itSupportPhone}`) : Alert.alert(t('auth.contactIt'), t('auth.contactItMessage')));
   const fieldError = (key?: string) => (key ? t(key as 'validation.required', { max: 100 }) : undefined);
-  const submit = handleSubmit((values) => finishSignIn(values, true));
+  const submit = handleSubmit(onSubmit);
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1" style={{ backgroundColor: colors.canvas }}>
@@ -171,6 +243,11 @@ export function LoginScreen() {
 
         {/* Form card */}
         <View className="mx-4 gap-3.5 rounded-[24px] bg-elevated p-[18px]" style={[shadows.card, { marginTop: -62 }]}>
+          {sessionExpired ? (
+            <Banner tone="warning" testID="login-session-expired">
+              {t('auth.sessionExpired')}
+            </Banner>
+          ) : null}
           <Pressable
             testID="login-domain"
             accessibilityRole="button"
@@ -297,12 +374,13 @@ export function LoginScreen() {
               onPress={submit}
               trailing={busy ? undefined : <Icon icon={ArrowRightIcon} size={18} weight="bold" color="on-primary" />}
             />
-            {biometric !== 'none' ? (
+            {biometric !== 'none' && biometricOn ? (
               <Pressable
                 testID="login-biometric"
                 accessibilityRole="button"
                 accessibilityLabel={biometric === 'face' ? t('auth.biometricFace') : t('auth.biometricFinger')}
-                onPress={onBiometric}
+                disabled={busy}
+                onPress={() => void onBiometric()}
                 className="h-[54px] w-[54px] items-center justify-center rounded-[14px] bg-elevated active:opacity-70"
                 style={{ borderWidth: 1.5, borderColor: colors['input-border'] }}
               >

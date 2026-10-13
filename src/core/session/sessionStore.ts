@@ -2,17 +2,24 @@ import { create } from 'zustand';
 
 import type { ServiceId } from '@/core/api/ApiError';
 
+import type { MyApp } from './myApps';
+
 export type SessionStatus = 'loading' | 'signedOut' | 'signedIn';
+
+/** Why there is no session: the login screen offers biometric sign-in on its own unless the user signed out by hand. */
+export type SignOutReason = 'launch' | 'user' | 'expired';
 
 type SessionState = {
   status: SessionStatus;
   username: string | null;
-  /** Which back-ends we hold a token for. A service can be down while the other works. */
+  /** Back-ends this user may call (granted on the apps portal). The SSO token itself serves all of them. */
   connected: Record<ServiceId, boolean>;
-  roles: Record<ServiceId, string[]>;
-  markSignedIn: (payload: { username: string | null; connected: Record<ServiceId, boolean>; roles?: Partial<Record<ServiceId, string[]>> }) => void;
-  markSignedOut: () => void;
-  setRoles: (service: ServiceId, roles: string[]) => void;
+  /** Apps the THACO apps portal grants; `null` while unknown (portal unreachable at sign-in). */
+  apps: MyApp[] | null;
+  signOutReason: SignOutReason | null;
+  markSignedIn: (payload: { username: string | null; connected: Record<ServiceId, boolean>; apps: MyApp[] | null }) => void;
+  markSignedOut: (reason: SignOutReason) => void;
+  setApps: (apps: MyApp[], connected: Record<ServiceId, boolean>) => void;
 };
 
 const noServices = { parcel: false, room: false };
@@ -21,16 +28,11 @@ export const useSessionStore = create<SessionState>((set) => ({
   status: 'loading',
   username: null,
   connected: noServices,
-  roles: { parcel: [], room: [] },
-  markSignedIn: ({ username, connected, roles }) =>
-    set((state) => ({
-      status: 'signedIn',
-      username,
-      connected,
-      roles: { parcel: roles?.parcel ?? state.roles.parcel, room: roles?.room ?? state.roles.room },
-    })),
-  markSignedOut: () => set({ status: 'signedOut', username: null, connected: noServices, roles: { parcel: [], room: [] } }),
-  setRoles: (service, roles) => set((state) => ({ roles: { ...state.roles, [service]: roles } })),
+  apps: null,
+  signOutReason: null,
+  markSignedIn: ({ username, connected, apps }) => set({ status: 'signedIn', username, connected, apps, signOutReason: null }),
+  markSignedOut: (signOutReason) => set({ status: 'signedOut', username: null, connected: noServices, apps: null, signOutReason }),
+  setApps: (apps, connected) => set({ apps, connected }),
 }));
 
 export const isAdministrator = (roles: string[]) => roles.some((role) => role.toLowerCase() === 'administrator');

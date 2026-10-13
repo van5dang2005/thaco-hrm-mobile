@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 
 function trimSlash(url: string) {
   return url.replace(/\/+$/, '');
@@ -10,16 +9,22 @@ function trimSlash(url: string) {
  */
 export const env = {
   /** Origin of thaco_be_ql_buu_pham (no trailing /api). */
-  parcelApiUrl: trimSlash(process.env.EXPO_PUBLIC_PARCEL_API_URL ?? 'http://localhost:5211'),
+  parcelApiUrl: trimSlash(process.env.EXPO_PUBLIC_PARCEL_API_URL ?? 'https://quanlybuuphamapi.thaco.com.vn/'),
   /** Origin of thaco_be_ql_phong_hop (no trailing /api). */
-  roomApiUrl: trimSlash(process.env.EXPO_PUBLIC_ROOM_API_URL ?? 'http://localhost:5113'),
+  roomApiUrl: trimSlash(process.env.EXPO_PUBLIC_ROOM_API_URL ?? 'https://datphonghopapi.thaco.com.vn/'),
   /** Deep link that opens THACO Paytime; falls back to the store URL when it cannot be opened. */
   paytimeUrl: process.env.EXPO_PUBLIC_PAYTIME_URL ?? 'thacopaytime://',
   paytimeIosStoreUrl: process.env.EXPO_PUBLIC_PAYTIME_IOS_STORE_URL ?? 'https://apps.apple.com/vn/search?term=THACO%20Paytime',
-  paytimeAndroidStoreUrl:
-    process.env.EXPO_PUBLIC_PAYTIME_ANDROID_STORE_URL ?? 'https://play.google.com/store/search?q=THACO%20Paytime&c=apps',
+  paytimeAndroidStoreUrl: process.env.EXPO_PUBLIC_PAYTIME_ANDROID_STORE_URL ?? 'https://play.google.com/store/search?q=THACO%20Paytime&c=apps',
   itSupportPhone: process.env.EXPO_PUBLIC_IT_SUPPORT_PHONE ?? '',
-  appVersion: Constants.expoConfig?.version ?? '0.0.0',
+  /** THACO apps portal: which applications (parcel, room, văn thư…) the signed-in account may use. */
+  appsApiUrl: trimSlash(process.env.EXPO_PUBLIC_APPS_API_URL || 'https://appsapi.thaco.com.vn'),
+  sso: {
+    issuer: trimSlash(process.env.EXPO_PUBLIC_SSO_ISSUER || 'https://sso.thaco.com.vn/realms/thacogroup'),
+    clientId: process.env.EXPO_PUBLIC_SSO_CLIENT_ID ?? 'THACO_SSO',
+    scope: process.env.EXPO_PUBLIC_SSO_SCOPES || 'openid profile email offline_access',
+  },
+  appVersion: process.env.EXPO_PUBLIC_APP_VERSION ?? '0.0.0',
   requestTimeoutMs: 20_000,
 };
 

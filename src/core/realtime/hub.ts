@@ -61,7 +61,7 @@ export class ServiceHub {
     const connection = new HubConnectionBuilder()
       .withUrl(`${apiFor(this.service).baseUrl}/hubs/notifications`, {
         // Read lazily so reconnects pick up refreshed tokens.
-        accessTokenFactory: () => tokenStore.get(this.service)?.token ?? '',
+        accessTokenFactory: () => tokenStore.get()?.token ?? '',
       })
       .withAutomaticReconnect(RETRY_DELAYS)
       .configureLogging(quietLogger)
@@ -77,7 +77,7 @@ export class ServiceHub {
   }
 
   private async connect() {
-    if (this.stopped || !tokenStore.get(this.service)) return;
+    if (this.stopped || !tokenStore.get()) return;
     if (this.connection?.state === HubConnectionState.Connected) return;
     this.connection = this.connection ?? this.build();
     try {
