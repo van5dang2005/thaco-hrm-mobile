@@ -13,8 +13,8 @@ import { Icon } from '@/shared/ui/Icon';
 import { CheckIcon, LockIcon, UsersIcon } from '@/shared/ui/icons';
 import { Text } from '@/shared/ui/Text';
 
-import { blockTime, isRoomBusy, type CrossLevel, type TimelineBlock } from '../logic';
 import type { RoomDto } from '../types';
+import { blockTime, isRoomBusy, type CrossLevel, type TimelineBlock } from '../utils/booking';
 
 export const HOUR_HEIGHT = 66;
 export const COLUMN_WIDTH = 96;

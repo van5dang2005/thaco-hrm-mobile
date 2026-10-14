@@ -1,3 +1,3 @@
-import { ReceptionListScreen } from '@/features/parcel/reception/ReceptionListScreen';
+import { ReceptionListScreen } from '@/features/parcel';
 
 export default ReceptionListScreen;

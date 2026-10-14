@@ -10,8 +10,8 @@ import { parcelBadgeKind } from '@/shared/ui/status';
 import { Text } from '@/shared/ui/Text';
 import { useToneColors, type Tone } from '@/shared/ui/tones';
 
-import type { Deadline } from '../logic';
 import { ParcelStatus } from '../types';
+import type { Deadline } from '../utils/parcel';
 
 /** "Còn N ngày" / "Hạn hôm nay" / "Quá hạn N ngày" (header pill and list cards). */
 export function daysLeftLabel(t: TFunction, deadline: Deadline) {

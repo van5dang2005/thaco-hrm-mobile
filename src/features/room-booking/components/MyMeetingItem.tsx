@@ -12,10 +12,10 @@ import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { StatusBadge, type BadgeKind } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 
-import { useBookingApprovals } from '../hooks';
-import { bookingFrom, bookingPermissions, bookingTo, buildApprovalSteps, type StepView } from '../logic';
-import { meetingProgress, meetingTone, type MeetingTone } from '../myMeetings';
+import { useBookingApprovals } from '../hooks/useBookingApprovals';
 import { BookingStatus, type BookingDto } from '../types';
+import { bookingFrom, bookingPermissions, bookingTo, buildApprovalSteps, type StepView } from '../utils/booking';
+import { meetingProgress, meetingTone, type MeetingTone } from '../utils/myMeetings';
 
 type Props = {
   booking: BookingDto;

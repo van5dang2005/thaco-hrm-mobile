@@ -1,4 +1,4 @@
-import { RoomStep } from '@/features/room-booking/wizard/RoomStep';
+import { RoomStep } from '@/features/room-booking';
 
 export default function RoomStepRoute() {
   return <RoomStep />;

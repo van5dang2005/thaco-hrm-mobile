@@ -10,8 +10,8 @@ import { parcelBadgeKind } from '@/shared/ui/status';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 
-import { isOpenParcel, parcelDeadline, senderTitle } from '../logic';
 import { ParcelStatus, type ParcelLookupDto } from '../types';
+import { isOpenParcel, parcelDeadline, senderTitle } from '../utils/parcel';
 import { DeadlineBar } from './DeadlineBars';
 
 /** Package icon tone follows the status badge (wait / warn / danger / ok / off). */

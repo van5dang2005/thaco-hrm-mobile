@@ -8,7 +8,7 @@ import { services } from '@/core/api/clients';
 import { qk } from '@/core/query/keys';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { kv, kvKeys } from '@/core/storage/kv';
-import { hrefForNotification, keysForNotification, keysForResource } from '@/features/notification/routing';
+import { hrefForNotification, keysForNotification, keysForResource } from '@/features/notification/utils/routing';
 import { toast } from '@/shared/ui/Toast';
 
 import { ServiceHub, type HubHandlers } from './hub';

@@ -11,8 +11,8 @@ import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { onBlue, useHeaderColors } from '@/shared/ui/ScreenShell';
 import { Text } from '@/shared/ui/Text';
 
-import { bookingFrom, bookingTo, type ExtendOption } from '../logic';
 import type { BookingDto } from '../types';
+import { bookingFrom, bookingTo, type ExtendOption } from '../utils/booking';
 
 /** Minutes to the start (upcoming), to the end (live) or since the end (extend window). */
 export function countdown(booking: BookingDto, now: Date) {

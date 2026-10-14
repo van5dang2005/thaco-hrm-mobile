@@ -1,3 +1,3 @@
-import { ParcelFormScreen } from '@/features/parcel/reception/ParcelFormScreen';
+import { ParcelFormScreen } from '@/features/parcel';
 
 export default ParcelFormScreen;

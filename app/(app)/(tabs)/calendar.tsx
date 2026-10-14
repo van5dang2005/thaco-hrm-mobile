@@ -1,4 +1,4 @@
-import { MyMeetingsScreen } from '@/features/room-booking/MyMeetingsScreen';
+import { MyMeetingsScreen } from '@/features/room-booking';
 
 export default function CalendarRoute() {
   return <MyMeetingsScreen />;

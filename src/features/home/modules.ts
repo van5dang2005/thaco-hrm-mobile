@@ -3,7 +3,7 @@ import type { Href } from 'expo-router';
 import type { ServiceId } from '@/core/api/ApiError';
 import type vi from '@/core/i18n/locales/vi';
 import type { Capability } from '@/core/session/capabilities';
-import { defaultDraft, useBookingDraft } from '@/features/room-booking/draftStore';
+import { defaultDraft, useBookingDraft } from '@/features/room-booking/store/draftStore';
 import {
   type AppIcon,
   CalendarCheckIcon,
@@ -23,7 +23,7 @@ import {
   usePendingApprovalsSummary,
   useReceptionSummary,
   useWaitingParcels,
-} from './signals';
+} from './hooks/useSignals';
 
 /** "Theo nhóm" card and icon tone: one per app with screens here, `other` for the apps that open on the web. */
 export type ModuleGroup = 'meeting' | 'parcel' | 'other';

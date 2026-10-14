@@ -9,9 +9,9 @@ import { BellIcon, CheckIcon, ClockIcon, XIcon } from '@/shared/ui/icons';
 import { Tag } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 
-import type { StepView } from '../logic';
+import type { StepView } from '../utils/booking';
 
-export { levelProgress } from '../logic';
+export { levelProgress } from '../utils/booking';
 
 const DOT = 28;
 

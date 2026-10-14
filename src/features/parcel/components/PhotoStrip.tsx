@@ -7,7 +7,7 @@ import { Icon } from '@/shared/ui/Icon';
 import { XIcon } from '@/shared/ui/icons';
 import { Text } from '@/shared/ui/Text';
 
-import { resolveParcelFileUrl } from '../api';
+import { resolveParcelFileUrl } from '../api/parcel.api';
 import type { ParcelAttachment } from '../types';
 
 /** Thumbnails keep the width of a 4-column row even with fewer photos. */

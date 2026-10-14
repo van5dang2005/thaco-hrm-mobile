@@ -1,3 +1,3 @@
-import { HandoverScreen } from '@/features/parcel/reception/HandoverScreen';
+import { HandoverScreen } from '@/features/parcel';
 
 export default HandoverScreen;

@@ -1,4 +1,4 @@
-import { MyParcelsScreen } from '@/features/parcel/MyParcelsScreen';
+import { MyParcelsScreen } from '@/features/parcel';
 
 export default function MyParcelsRoute() {
   return <MyParcelsScreen />;

@@ -13,10 +13,10 @@ import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
 
-import { bookingsApi } from '../api';
-import { useSchedule } from '../hooks';
-import { bookingFrom, extendOptions } from '../logic';
+import { bookingsApi } from '../api/booking.api';
+import { useSchedule } from '../hooks/useSchedule';
 import type { BookingDto } from '../types';
+import { bookingFrom, extendOptions } from '../utils/booking';
 
 /** Pick a new end time (same day) for a meeting in progress: ExtendBooking, same rules as the detail screen. */
 export function ExtendSheet({ booking, onClose }: { booking: BookingDto | null; onClose: () => void }) {
