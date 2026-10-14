@@ -4,9 +4,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
-import { Button } from '@/shared/ui/Button';
 import { Icon } from '@/shared/ui/Icon';
-import { CameraIcon, ImagePlusIcon, XIcon } from '@/shared/ui/icons';
+import { type AppIcon, CameraIcon, ImagePlusIcon, XIcon } from '@/shared/ui/icons';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
 
@@ -24,6 +23,7 @@ type Props = {
 };
 
 const QUALITY = 0.6;
+const TILE = 76;
 
 function sizeOf(asset: ImagePicker.ImagePickerAsset) {
   if (asset.fileSize) return asset.fileSize;
@@ -34,7 +34,10 @@ function sizeOf(asset: ImagePicker.ImagePickerAsset) {
   }
 }
 
-/** Parcel photos: camera or library, at most 5 in total, each ≤ 5MB (LIMIT_5_ATTACHMENTS / EXCEED_5MB_LIMIT). */
+/**
+ * Parcel photos as a row of tiles: thumbnails, then "Chụp ảnh" / "Thư viện" tiles while there is room.
+ * At most 5 in total, each ≤ 5MB (LIMIT_5_ATTACHMENTS / EXCEED_5MB_LIMIT). The caller shows the title and count.
+ */
 export function PhotoPicker({ kept, onRemoveKept, files, onChangeFiles, disabled }: Props) {
   const { t } = useTranslation();
   const count = kept.length + files.length;
@@ -80,43 +83,51 @@ export function PhotoPicker({ kept, onRemoveKept, files, onChangeFiles, disabled
     ...kept.map((a) => ({ key: a.id, uri: resolveParcelFileUrl(a.filePath), onRemove: () => onRemoveKept(a.id) })),
     ...files.map((f, index) => ({ key: f.uri, uri: f.uri, onRemove: () => onChangeFiles(files.filter((_, i) => i !== index)) })),
   ];
+  const canAdd = slots > 0 && !disabled;
 
   return (
-    <View className="gap-3">
-      <View className="flex-row items-center justify-between">
-        <Text weight="semibold" className="text-body">
-          {t('reception.photos')}
-        </Text>
-        <Text className="text-meta text-muted">
-          {t('reception.photosCount', { count })}
-        </Text>
-      </View>
-      {thumbs.length ? (
-        <View className="flex-row flex-wrap gap-2">
-          {thumbs.map((thumb) => (
-            <View key={thumb.key}>
-              <Image source={{ uri: thumb.uri }} style={{ width: 72, height: 72, borderRadius: 12 }} contentFit="cover" />
-              {!disabled ? (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('reception.removePhoto')}
-                  onPress={thumb.onRemove}
-                  hitSlop={8}
-                  className="absolute -right-1.5 -top-1.5 h-6 w-6 items-center justify-center rounded-full bg-inverse"
-                >
-                  <Icon icon={XIcon} size={13} weight="bold" color="on-inverse" />
-                </Pressable>
-              ) : null}
-            </View>
-          ))}
+    <View className="flex-row flex-wrap gap-2.5">
+      {thumbs.map((thumb) => (
+        <View key={thumb.key}>
+          <Image source={{ uri: thumb.uri }} style={{ width: TILE, height: TILE, borderRadius: 14 }} contentFit="cover" />
+          {!disabled ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('reception.removePhoto')}
+              onPress={thumb.onRemove}
+              hitSlop={8}
+              className="absolute -right-1.5 -top-1.5 h-6 w-6 items-center justify-center rounded-full bg-inverse"
+            >
+              <Icon icon={XIcon} size={13} weight="bold" color="on-inverse" />
+            </Pressable>
+          ) : null}
         </View>
-      ) : null}
-      {slots > 0 && !disabled ? (
-        <View className="flex-row gap-2">
-          <Button testID="parcel-form-camera" className="flex-1" size="lg" variant="soft" icon={CameraIcon} label={t('reception.takePhoto')} onPress={() => void takePhoto()} />
-          <Button testID="parcel-form-library" className="flex-1" size="lg" variant="ghost" icon={ImagePlusIcon} label={t('reception.pickPhoto')} onPress={() => void pickPhotos()} />
-        </View>
+      ))}
+      {canAdd ? (
+        <>
+          <AddTile testID="parcel-form-camera" icon={CameraIcon} label={t('reception.takePhoto')} onPress={() => void takePhoto()} />
+          <AddTile testID="parcel-form-library" icon={ImagePlusIcon} label={t('reception.pickPhoto')} onPress={() => void pickPhotos()} />
+        </>
       ) : null}
     </View>
+  );
+}
+
+/** Dashed square that adds photos, the same size as a thumbnail. */
+function AddTile({ icon, label, onPress, testID }: { icon: AppIcon; label: string; onPress: () => void; testID?: string }) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      className="items-center justify-center gap-1 rounded-[14px] border-[1.5px] border-dashed border-line-strong bg-panel active:opacity-70"
+      style={{ width: TILE, height: TILE }}
+    >
+      <Icon icon={icon} size={20} color="primary" />
+      <Text weight="semibold" numberOfLines={1} className="text-primary" style={{ fontSize: 11, lineHeight: 14 }}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }

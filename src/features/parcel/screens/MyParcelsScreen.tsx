@@ -8,8 +8,20 @@ import { DEFAULT_PAGE_SIZE, flattenPages, nextPageParam } from '@/core/api/types
 import { qk } from '@/core/query/keys';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { useParcelMe } from '@/core/session/useMe';
+import { HeaderActionButton } from '@/shared/ui/HeaderBar';
+import {
+  type AppIcon,
+  CalendarOffIcon,
+  CheckCheckIcon,
+  CircleCheckIcon,
+  ClockAlertIcon,
+  InboxIcon,
+  PackageCheckIcon,
+  PackageIcon,
+  PackageXIcon,
+  PlusIcon,
+} from '@/shared/ui/icons';
 import { FloatingCard } from '@/shared/ui/Card';
-import { PackageIcon } from '@/shared/ui/icons';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { CONTENT_PADDING, ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
@@ -20,6 +32,7 @@ import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
 
 import { parcelsApi } from '../api/parcel.api';
 import { ParcelCard } from '../components/ParcelCard';
+import { useCanCreateParcel } from '../hooks/useCanCreateParcel';
 import { useMyParcelStats } from '../hooks/useMyParcelStats';
 import { parcelTabs, type ParcelTab } from '../utils/parcel';
 
@@ -30,12 +43,15 @@ const empty: Record<ParcelTab, 'parcels.emptyPending' | 'parcels.emptyOverdue' |
   cancelled: 'parcels.emptyCancelled',
 };
 
-/** "Bưu phẩm của tôi" (6d). */
+const emptyIcon: Record<ParcelTab, AppIcon> = { pending: InboxIcon, overdue: CircleCheckIcon, handed: CheckCheckIcon, cancelled: CalendarOffIcon };
+
+/** "Bưu phẩm của tôi" (6d), with "Thêm bưu phẩm" for callers who may create parcels. */
 export function MyParcelsScreen() {
   const { t } = useTranslation();
   const connected = useSessionStore((s) => s.connected.parcel);
   const me = useParcelMe();
   const stats = useMyParcelStats();
+  const canCreate = useCanCreateParcel();
   const [tab, setTab] = useState<ParcelTab>('pending');
 
   const query = useInfiniteQuery({
@@ -49,18 +65,33 @@ export function MyParcelsScreen() {
   const pull = usePullRefresh(() => Promise.all([query.refetch(), stats.refetch()]));
 
   const tabs: StatusTabItem<ParcelTab>[] = [
-    { key: 'pending', label: t('parcels.tabPending'), count: stats.data?.waiting, tone: 'wait', testID: 'parcels-tab-pending' },
-    { key: 'overdue', label: t('parcels.tabOverdue'), count: stats.data?.overdue, tone: 'danger', alarm: true, testID: 'parcels-tab-overdue' },
-    { key: 'handed', label: t('parcels.tabHanded'), count: stats.data?.handedOver, tone: 'ok', testID: 'parcels-tab-handed' },
-    { key: 'cancelled', label: t('parcels.tabCancelled'), count: stats.data?.cancelled, tone: 'off', testID: 'parcels-tab-cancelled' },
+    { key: 'pending', label: t('parcels.tabPending'), icon: PackageIcon, count: stats.data?.waiting, tone: 'wait', testID: 'parcels-tab-pending' },
+    { key: 'overdue', label: t('parcels.tabOverdue'), icon: ClockAlertIcon, count: stats.data?.overdue, tone: 'danger', testID: 'parcels-tab-overdue' },
+    { key: 'handed', label: t('parcels.tabHanded'), icon: PackageCheckIcon, count: stats.data?.handedOver, tone: 'ok', testID: 'parcels-tab-handed' },
+    { key: 'cancelled', label: t('parcels.tabCancelled'), icon: PackageXIcon, count: stats.data?.cancelled, tone: 'off', testID: 'parcels-tab-cancelled' },
   ];
 
   const header = (
-    <ModuleHeader testID="parcels-header" icon={PackageIcon} title={t('parcels.title')} />
+    <ModuleHeader
+      testID="parcels-header"
+      icon={PackageIcon}
+      title={t('parcels.title')}
+      right={
+        canCreate ? (
+          <HeaderActionButton
+            testID="parcels-create"
+            icon={PlusIcon}
+            label={t('parcels.createShort')}
+            accessibilityLabel={t('parcels.create')}
+            onPress={() => router.push('/parcels/reception/new')}
+          />
+        ) : undefined
+      }
+    />
   );
 
   const floating = (
-    <FloatingCard>
+    <FloatingCard radius={22}>
       <StatusTabs testID="parcels-tabs" items={tabs} value={tab} onChange={setTab} />
     </FloatingCard>
   );
@@ -93,7 +124,7 @@ export function MyParcelsScreen() {
           onEndReached={() => {
             if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
           }}
-          ListEmptyComponent={<EmptyState testID="parcels-empty" message={t(empty[tab])} />}
+          ListEmptyComponent={<EmptyState testID="parcels-empty" icon={emptyIcon[tab]} message={t(empty[tab])} />}
           ListFooterComponent={query.isFetchingNextPage ? <Text className="py-4 text-center text-meta text-muted">{t('common.loadMore')}</Text> : null}
         />
       )}

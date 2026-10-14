@@ -44,6 +44,7 @@ export { default as CircleQuestionMarkIcon } from 'lucide-react-native/icons/cir
 export { default as CircleUserIcon } from 'lucide-react-native/icons/circle-user';
 export { default as CitrusIcon } from 'lucide-react-native/icons/citrus';
 export { default as ClipboardListIcon } from 'lucide-react-native/icons/clipboard-list';
+export { default as ClockAlertIcon } from 'lucide-react-native/icons/clock-alert';
 export { default as ClockIcon } from 'lucide-react-native/icons/clock';
 export { default as CoffeeIcon } from 'lucide-react-native/icons/coffee';
 export { default as ContrastIcon } from 'lucide-react-native/icons/contrast';
@@ -80,8 +81,10 @@ export { default as MinusIcon } from 'lucide-react-native/icons/minus';
 export { default as MonitorIcon } from 'lucide-react-native/icons/monitor';
 export { default as MoonIcon } from 'lucide-react-native/icons/moon';
 export { default as NetworkIcon } from 'lucide-react-native/icons/network';
+export { default as PackageCheckIcon } from 'lucide-react-native/icons/package-check';
 export { default as PackageIcon } from 'lucide-react-native/icons/package';
 export { default as PackagePlusIcon } from 'lucide-react-native/icons/package-plus';
+export { default as PackageXIcon } from 'lucide-react-native/icons/package-x';
 export { default as PaperclipIcon } from 'lucide-react-native/icons/paperclip';
 export { default as PencilIcon } from 'lucide-react-native/icons/pencil';
 export { default as PhoneIcon } from 'lucide-react-native/icons/phone';
@@ -90,6 +93,7 @@ export { default as PresentationIcon } from 'lucide-react-native/icons/presentat
 export { default as ProjectorIcon } from 'lucide-react-native/icons/projector';
 export { default as RepeatIcon } from 'lucide-react-native/icons/repeat';
 export { default as RotateCcwIcon } from 'lucide-react-native/icons/rotate-ccw';
+export { default as ScanBarcodeIcon } from 'lucide-react-native/icons/scan-barcode';
 export { default as ScanFaceIcon } from 'lucide-react-native/icons/scan-face';
 export { default as SearchIcon } from 'lucide-react-native/icons/search';
 export { default as SendIcon } from 'lucide-react-native/icons/send';

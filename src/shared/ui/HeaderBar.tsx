@@ -140,3 +140,24 @@ export function HeaderPillButton({ icon, label, onPress, caret, testID }: { icon
     </Pressable>
   );
 }
+
+/** Main action on the blue header: compact white 32pt pill with a primary glyph and label ("Thêm mới"). */
+export function HeaderActionButton({ icon, label, accessibilityLabel, onPress, testID }: { icon: AppIcon; label: string; accessibilityLabel?: string; onPress: () => void; testID?: string }) {
+  const { colors } = useTheme();
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? label}
+      onPress={onPress}
+      hitSlop={{ top: 6, bottom: 6 }}
+      className="h-8 flex-row items-center justify-center gap-1 rounded-full pl-2 pr-3 active:opacity-70"
+      style={{ backgroundColor: colors['header-name'] }}
+    >
+      <Icon icon={icon} size={14} weight="bold" rawColor={colors.header} />
+      <Text weight="bold" numberOfLines={1} maxFontSizeMultiplier={1.15} style={{ fontSize: 12.5, lineHeight: 16, color: colors.header }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
