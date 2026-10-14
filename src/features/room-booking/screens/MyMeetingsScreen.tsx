@@ -36,7 +36,7 @@ import { isUpcoming, weekKeys, weekStartOf } from '../utils/myMeetings';
 type Tab = 'upcoming' | 'waiting' | 'past';
 const WINDOW_PAGE_SIZE = 100;
 
-/** "Lịch" tab (5b): bookings I created (GET /api/bookings/get-my-bookings) for the week on screen. */
+/** "Lịch" tab (5b): bookings I created (GET /api/bookings/get-my-bookings) for the day picked on the week strip. */
 export function MyMeetingsScreen() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -76,14 +76,17 @@ export function MyMeetingsScreen() {
 
   const days = new Set(weekKeys(weekStart));
   const keyword = search?.trim().toLowerCase() ?? '';
-  const inWeek = all.filter((b) => {
+  // The list shows the selected day; a search looks across the whole week.
+  const shown = all.filter((b) => {
     const from = bookingFrom(b);
-    return !!from && days.has(toDateKey(from)) && (!keyword || (b.content ?? '').toLowerCase().includes(keyword) || (b.code ?? '').toLowerCase().includes(keyword));
+    if (!from) return false;
+    if (!keyword) return toDateKey(from) === selectedDay;
+    return days.has(toDateKey(from)) && ((b.content ?? '').toLowerCase().includes(keyword) || (b.code ?? '').toLowerCase().includes(keyword));
   });
   const inTab = (b: BookingDto, which: Tab) =>
     which === 'past' ? !isUpcoming(b, now) : which === 'waiting' ? isUpcoming(b, now) && b.status === BookingStatus.Waiting : isUpcoming(b, now);
-  const counts = { upcoming: inWeek.filter((b) => inTab(b, 'upcoming')).length, waiting: inWeek.filter((b) => inTab(b, 'waiting')).length };
-  const items = inWeek.filter((b) => inTab(b, tab)).sort((a, b) => (tab === 'past' ? -1 : 1) * (a.from ?? '').localeCompare(b.from ?? ''));
+  const counts = { upcoming: shown.filter((b) => inTab(b, 'upcoming')).length, waiting: shown.filter((b) => inTab(b, 'waiting')).length };
+  const items = shown.filter((b) => inTab(b, tab)).sort((a, b) => (tab === 'past' ? -1 : 1) * (a.from ?? '').localeCompare(b.from ?? ''));
   const sections = groupByDay(items, (b) => toDateKey(bookingFrom(b) ?? now)).map((g) => ({ key: g.key, data: g.data }));
   const weekMeetings = all.filter((b) => days.has(toDateKey(bookingFrom(b) ?? new Date(0))) && b.status !== BookingStatus.Canceled && b.status !== BookingStatus.Rejected).length;
 
@@ -109,19 +112,25 @@ export function MyMeetingsScreen() {
     router.push('/rooms/book');
   };
 
-  const selectDay = (key: DateKey) => {
+  /** Shows `key` from the top; a day before today opens "Đã qua", a later day leaves it. */
+  const showDay = (key: DateKey) => {
     setSelectedDay(key);
+    if (key < today) setTab('past');
+    else if (key > today && tab === 'past') setTab('upcoming');
+    listRef.current?.getScrollResponder()?.scrollTo({ y: 0, animated: false });
+  };
+
+  const selectDay = (key: DateKey) => {
+    showDay(key);
     // Every day change asks the server again (refetch ignores `enabled`, hence the check).
     if (connected) void query.refetch();
-    const index = sections.findIndex((s) => s.key === key);
-    if (index >= 0) listRef.current?.scrollToLocation({ sectionIndex: index, itemIndex: 0, viewOffset: 40, animated: true });
   };
 
   const changeWeek = (start: DateKey) => {
     setWeekStart(start);
     // Keep the same weekday selected in the new week (today when it is inside).
     const offset = weekKeys(weekStart).indexOf(selectedDay);
-    setSelectedDay(weekKeys(start).includes(today) ? today : weekKeys(start)[Math.max(0, offset)]);
+    showDay(weekKeys(start).includes(today) ? today : weekKeys(start)[Math.max(0, offset)]);
   };
 
   /** A day from the month calendar: in this week it acts like a tap on the strip, otherwise the strip jumps to its week. */
@@ -132,7 +141,7 @@ export function MyMeetingsScreen() {
       return;
     }
     setWeekStart(start);
-    setSelectedDay(key);
+    showDay(key);
   };
 
   const { month, year } = parseDateKey(selectedDay);
