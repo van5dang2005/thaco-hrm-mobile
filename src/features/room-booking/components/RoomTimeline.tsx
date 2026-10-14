@@ -20,6 +20,7 @@ export const HOUR_HEIGHT = 66;
 export const COLUMN_WIDTH = 96;
 /** Hour labels column. */
 export const AXIS_WIDTH = 42;
+/** Minimum height of the column heads. */
 const HEAD_HEIGHT = 60;
 const BLOCK_INSET = 3;
 const FADE_WIDTH = 28;
@@ -68,15 +69,18 @@ export function RoomTimeline({ rooms, blocksByRoom, crossLevel, dateKey, startHo
   const scrollX = useSharedValue(0);
   const [viewport, setViewport] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
+  // Heads grow when a room name wraps; the right-edge fade starts below them.
+  const [headHeight, setHeadHeight] = useState(HEAD_HEIGHT);
   const now = useNow();
   const hours = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i);
   const gridStart = startHour * 60;
+  const gridEnd = endHour * 60;
   const height = (endHour - startHour) * HOUR_HEIGHT;
   const columnsWidth = rooms.length * COLUMN_WIDTH;
   const isToday = dateKey === todayKey(now);
   const nowMin = minutesOfDay(now);
   const y = (minute: number) => ((minute - gridStart) / 60) * HOUR_HEIGHT;
-  const showNow = isToday && nowMin >= gridStart && nowMin <= endHour * 60;
+  const showNow = isToday && nowMin >= gridStart && nowMin <= gridEnd;
   const nowY = y(nowMin);
   // Rooms not yet scrolled into view: the "+N" chip in the corner.
   const hidden = viewport ? Math.max(0, rooms.length - Math.floor((offsetX + viewport + 8) / COLUMN_WIDTH)) : 0;
@@ -102,22 +106,27 @@ export function RoomTimeline({ rooms, blocksByRoom, crossLevel, dateKey, startHo
   return (
     <View className="flex-1">
       {/* Column heads: fixed vertically, follow the horizontal scroll of the grid. */}
-      <View className="flex-row border-b border-line-2" style={{ height: HEAD_HEIGHT }}>
+      <View className="flex-row border-b border-line-2" style={{ minHeight: HEAD_HEIGHT }} onLayout={(e) => setHeadHeight(e.nativeEvent.layout.height)}>
         <View className="items-center justify-center border-r border-line-2" style={{ width: AXIS_WIDTH }}>
           <Text mono maxFontSizeMultiplier={1} className="text-subtle" style={{ fontSize: 9.5, lineHeight: 12 }}>
             {t('rooms.timezone')}
           </Text>
         </View>
         <View className="flex-1 overflow-hidden" onLayout={(e) => setViewport(e.nativeEvent.layout.width)}>
-          <Animated.View style={[{ flexDirection: 'row', height: HEAD_HEIGHT }, headStyle]}>
+          <Animated.View style={[{ flexDirection: 'row', minHeight: HEAD_HEIGHT }, headStyle]}>
             {rooms.map((room) => {
               const locked = crossLevel(room) === 'blocked';
               const busy = isToday && isRoomBusy(blocksByRoom[room.id] ?? [], nowMin);
               return (
-                <View key={room.id} testID={`timeline-head-${room.id}`} style={{ width: COLUMN_WIDTH }} className="justify-center gap-0.5 border-r border-line-2 px-2">
-                  <View className="flex-row items-center gap-1">
-                    {locked ? <Icon icon={LockIcon} size={11} weight="bold" color="subtle" /> : null}
-                    <Text weight="bold" numberOfLines={1} maxFontSizeMultiplier={1.15} className="flex-shrink" style={{ fontSize: 12, lineHeight: 16, color: locked ? colors.subtle : colors.ink }}>
+                <View key={room.id} testID={`timeline-head-${room.id}`} style={{ width: COLUMN_WIDTH }} className="justify-center gap-0.5 border-r border-line-2 px-2 py-1.5">
+                  {/* Full room name, wrapped: names often share a long prefix ("Phòng họp …"). */}
+                  <View className="flex-row items-start gap-1">
+                    {locked ? (
+                      <View className="mt-0.5">
+                        <Icon icon={LockIcon} size={11} weight="bold" color="subtle" />
+                      </View>
+                    ) : null}
+                    <Text weight="bold" maxFontSizeMultiplier={1.15} className="flex-shrink" style={{ fontSize: 12, lineHeight: 16, color: locked ? colors.subtle : colors.ink }}>
                       {room.name}
                     </Text>
                   </View>
@@ -208,9 +217,12 @@ export function RoomTimeline({ rooms, blocksByRoom, crossLevel, dateKey, startHo
                       />
                     )}
 
-                    {(blocksByRoom[room.id] ?? []).map((block) => {
-                      const top = Math.max(0, y(block.startMin)) + BLOCK_INSET;
-                      const blockHeight = Math.max(26, y(block.endMin) - y(block.startMin) - BLOCK_INSET * 2);
+                    {(blocksByRoom[room.id] ?? []).filter((block) => block.endMin > gridStart && block.startMin < gridEnd).map((block) => {
+                      // Clipped to the shown hours: a meeting may start before or end after them.
+                      const startMin = Math.max(block.startMin, gridStart);
+                      const endMin = Math.min(block.endMin, gridEnd);
+                      const top = y(startMin) + BLOCK_INSET;
+                      const blockHeight = Math.max(26, y(endMin) - y(startMin) - BLOCK_INSET * 2);
                       const pending = block.kind === 'pending' || block.kind === 'cluster';
                       const finished = block.kind === 'finished';
                       const fg = pending ? colors['primary-tint-text'] : finished ? colors['off-text'] : colors['approved-block-text'];
@@ -312,7 +324,7 @@ export function RoomTimeline({ rooms, blocksByRoom, crossLevel, dateKey, startHo
 
       {/* Fade on the right edge: more rooms to scroll to. */}
       {hidden > 0 ? (
-        <View pointerEvents="none" style={{ position: 'absolute', top: HEAD_HEIGHT, right: 0, bottom: 0, width: FADE_WIDTH }}>
+        <View pointerEvents="none" style={{ position: 'absolute', top: headHeight, right: 0, bottom: 0, width: FADE_WIDTH }}>
           <Svg width={FADE_WIDTH} height="100%">
             <Defs>
               <LinearGradient id="timelineFade" x1="0" y1="0" x2="1" y2="0">

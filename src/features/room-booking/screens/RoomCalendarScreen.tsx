@@ -46,6 +46,9 @@ type Mode = 'day' | 'week';
 
 /** Durations offered by the quick-book chip, in minutes. */
 const DURATIONS = [30, 60, 90, 120];
+/** Hours shown by the day grid. */
+const GRID_START_HOUR = 7;
+const GRID_END_HOUR = 20;
 
 /** 3a: rooms × hours for one day (or the week as an agenda). Tap an empty slot to book it. */
 export function RoomCalendarScreen() {
@@ -77,7 +80,7 @@ export function RoomCalendarScreen() {
   const rooms = useRooms(areaId, departmentId);
   const crossLevel = useCrossLevel();
   const levels = useApprovalLevels();
-  // One query for the shown week: day grid, week agenda and the dots of the strip.
+  // The shown week: week agenda and the dots of the strip.
   const schedule = useSchedule({
     fromDate: atMinutes(weekStart, 0).toISOString(),
     toDate: atMinutes(addDays(weekStart, 7), 0).toISOString(),
@@ -85,17 +88,24 @@ export function RoomCalendarScreen() {
     departmentId,
     search: query,
   });
+  // The selected day: fetched again every time the day changes.
+  const daySchedule = useSchedule(
+    {
+      fromDate: atMinutes(dateKey, 0).toISOString(),
+      toDate: atMinutes(addDays(dateKey, 1), 0).toISOString(),
+      areaId,
+      departmentId,
+      search: query,
+    },
+    mode === 'day',
+    { staleTime: 0 },
+  );
 
   const roomList = rooms.data ?? [];
   const weekBookings = schedule.data ?? [];
-  const dayBookings = weekBookings.filter((b) => toDateKey(bookingFrom(b) ?? new Date(0)) === dateKey);
+  // Until the day answers, the grid shows what the week already has for it.
+  const dayBookings = (daySchedule.data ?? weekBookings).filter((b) => toDateKey(bookingFrom(b) ?? new Date(0)) === dateKey);
   const busyDays = new Set(weekBookings.filter((b) => b.status === BookingStatus.Approved || b.status === BookingStatus.Waiting).map((b) => toDateKey(bookingFrom(b) ?? new Date(0))));
-
-  // Grid spans the earliest opening to the latest closing (07–19 when unknown).
-  const opens = roomList.map((r) => parseTimeOfDay(r.openedAt)).filter((m): m is number => m !== null);
-  const closes = roomList.map((r) => parseTimeOfDay(r.closedAt)).filter((m): m is number => m !== null);
-  const startHour = opens.length ? Math.floor(Math.min(...opens) / 60) : 7;
-  const endHour = Math.max(startHour + 4, closes.length ? Math.ceil(Math.max(...closes) / 60) : 19);
 
   const blocksByRoom: Record<string, TimelineBlock[]> = {};
   roomList.forEach((room) => {
@@ -279,14 +289,14 @@ export function RoomCalendarScreen() {
       <WeekAgenda weekStart={weekStart} bookings={weekBookings} rooms={roomList} title={visibleTitle} onOpen={(b) => router.push({ pathname: '/rooms/bookings/[id]', params: { id: b.id } })} />
     ) : (
       <Card className="flex-1 overflow-hidden" style={{ borderRadius: 22 }}>
-        {schedule.isError ? <ErrorState compact error={schedule.error} onRetry={() => void schedule.refetch()} /> : null}
+        {daySchedule.isError ? <ErrorState compact error={daySchedule.error} onRetry={() => void daySchedule.refetch()} /> : null}
         <RoomTimeline
           rooms={roomList}
           blocksByRoom={blocksByRoom}
           crossLevel={crossLevel}
           dateKey={dateKey}
-          startHour={startHour}
-          endHour={endHour}
+          startHour={GRID_START_HOUR}
+          endHour={GRID_END_HOUR}
           selection={selection}
           blockTitle={(block) => visibleTitle(block.bookings[0])}
           onPressBlock={onPressBlock}
