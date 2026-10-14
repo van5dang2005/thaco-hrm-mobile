@@ -5,6 +5,9 @@
 
 export const SLOT_MINUTES = 30;
 
+/** Hours the app offers for booking (B2 slots) and shows on the room calendar, within each room's own opening hours. */
+export const BOOKING_HOURS = { start: 7, end: 20 };
+
 /** A booked interval of one room on one day. */
 export type Busy = { startMin: number; endMin: number; kind: 'approved' | 'pending' };
 
@@ -14,27 +17,35 @@ export type Busy = { startMin: number; endMin: number; kind: 'approved' | 'pendi
  *   bookable, but whichever request is approved first auto-cancels the other.
  * - `taken`: an approved booking (or a waiting one in a room that refuses overlaps) overlaps.
  * - `past`: starts at or before now.
+ * - `closed`: outside the room's opening hours.
  */
-export type SlotState = 'free' | 'pending' | 'taken' | 'past';
+export type SlotState = 'free' | 'pending' | 'taken' | 'past' | 'closed';
 
 export type Slot = { startMin: number; state: SlotState };
 
-/** Inclusive slot indexes. `start === end` is a single 30-minute slot. */
-export type SlotRange = { start: number; end: number };
+/**
+ * Inclusive slot indexes. `start === end` is a single 30-minute slot. `awaitingEnd`: only the start
+ * time has been tapped so far (the range is its 30-minute default).
+ */
+export type SlotRange = { start: number; end: number; awaitingEnd?: boolean };
 
 const overlaps = (b: Busy, start: number, end: number) => b.startMin < end && b.endMin > start;
 
 /**
- * Slots from opening to closing time. A slot is only offered when it ends by closing time, because
- * the server rejects bookings that run past `closedAt`.
+ * Slots from `from` to `to` (the booking window). Slots outside the room's opening hours are shown
+ * as `closed`, because the server rejects bookings that start before `openedAt` or run past `closedAt`.
  */
 export function buildSlots({
+  from,
+  to,
   open,
   close,
   busy,
   blockPending,
   nowMin,
 }: {
+  from: number;
+  to: number;
   open: number;
   close: number;
   busy: Busy[];
@@ -44,11 +55,12 @@ export function buildSlots({
   nowMin?: number | null;
 }): Slot[] {
   const slots: Slot[] = [];
-  for (let start = open; start + SLOT_MINUTES <= close; start += SLOT_MINUTES) {
+  for (let start = from; start + SLOT_MINUTES <= to; start += SLOT_MINUTES) {
     const end = start + SLOT_MINUTES;
     const hits = busy.filter((b) => overlaps(b, start, end));
     let state: SlotState = 'free';
     if (nowMin != null && start <= nowMin) state = 'past';
+    else if (start < open || end > close) state = 'closed';
     else if (hits.some((b) => b.kind === 'approved' || blockPending)) state = 'taken';
     else if (hits.length) state = 'pending';
     slots.push({ startMin: start, state });
@@ -59,17 +71,35 @@ export function buildSlots({
 export const isPickable = (slot: Slot | undefined) => !!slot && (slot.state === 'free' || slot.state === 'pending');
 
 /**
- * SlotGrid tap rule. The first tap picks a start slot (a valid 30-minute range on its own). A second
- * tap on a later slot extends the range to it when every slot in between is bookable; any other tap
- * starts a new range. Taps on unbookable slots are ignored.
+ * The grid shows time points, not slots: point `i < slots.length` is the start of slot `i`, the last
+ * point is the end of the last slot (closing time). A booking runs from one tapped point to another.
  */
-export function nextRange(current: SlotRange | null, index: number, slots: Slot[]): SlotRange | null {
-  if (!isPickable(slots[index])) return current;
-  const awaitingEnd = current && current.start === current.end;
-  if (awaitingEnd && index > current.start && slots.slice(current.start, index + 1).every(isPickable)) {
-    return { start: current.start, end: index };
-  }
-  return { start: index, end: index };
+export const pointMinute = (slots: Slot[], point: number) =>
+  point < slots.length ? slots[point].startMin : slots[slots.length - 1].startMin + SLOT_MINUTES;
+
+/** Can `point` end the range that starts at `range.start`? Every slot in between must be bookable. */
+function canEndAt(range: SlotRange | null, point: number, slots: Slot[]) {
+  return !!range?.awaitingEnd && point > range.start && slots.slice(range.start, point).every(isPickable);
+}
+
+/**
+ * A point is tappable when it can end the range being picked, start a new one, or end the 30 minutes
+ * before it (closing time, or a time right before a taken slot).
+ */
+export const isPointPickable = (range: SlotRange | null, point: number, slots: Slot[]) =>
+  canEndAt(range, point, slots) || isPickable(slots[point]) || isPickable(slots[point - 1]);
+
+/**
+ * SlotGrid tap rule. The first tap picks the start time (30 minutes by default). A second tap on a
+ * later time ends the range there when every slot in between is bookable; any other tap starts a new
+ * range. A time that cannot start a meeting (closing time, or right before a taken slot) picks the
+ * 30 minutes ending there. Taps on unbookable times are ignored.
+ */
+export function nextRange(current: SlotRange | null, point: number, slots: Slot[]): SlotRange | null {
+  if (canEndAt(current, point, slots)) return { start: current!.start, end: point - 1 };
+  if (isPickable(slots[point])) return { start: point, end: point, awaitingEnd: true };
+  if (isPickable(slots[point - 1])) return { start: point - 1, end: point - 1 };
+  return current;
 }
 
 /** Range of the draft's times in the grid, or null when they do not match bookable slots. */

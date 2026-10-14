@@ -6,7 +6,7 @@ import { Pressable, ScrollView, View } from 'react-native';
 import { useRoomMe } from '@/core/session/useMe';
 import { sameId } from '@/core/session/userTypes';
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { addDays, atMinutes, formatKey, formatMinutes, formatTime, minutesOfDay, parseDateKey, parseTimeOfDay, toDateKey, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
+import { addDays, atMinutes, formatKey, formatMinutes, formatTime, minutesOfDay, parseDateKey, toDateKey, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
 import { useNow } from '@/shared/hooks/useNow';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
@@ -39,16 +39,14 @@ import { useRooms } from '../hooks/useRooms';
 import { useSchedule } from '../hooks/useSchedule';
 import { defaultDraft, useBookingDraft } from '../store/draftStore';
 import { BookingStatus, type BookingDto, type RoomDto } from '../types';
-import { bookingFrom, bookingTo, isRoomBusy, roomDayBlocks, type TimelineBlock } from '../utils/booking';
+import { BOOKING_HOURS } from '../utils/availability';
+import { bookingFrom, bookingTo, isRoomBusy, roomDayBlocks, roomHours, type TimelineBlock } from '../utils/booking';
 import { weekStartOf } from '../utils/myMeetings';
 
 type Mode = 'day' | 'week';
 
 /** Durations offered by the quick-book chip, in minutes. */
 const DURATIONS = [30, 60, 90, 120];
-/** Hours shown by the day grid. */
-const GRID_START_HOUR = 7;
-const GRID_END_HOUR = 20;
 
 /** 3a: rooms × hours for one day (or the week as an agenda). Tap an empty slot to book it. */
 export function RoomCalendarScreen() {
@@ -115,8 +113,7 @@ export function RoomCalendarScreen() {
   const isToday = dateKey === today;
   const nowMin = minutesOfDay(now);
   const freeNow = roomList.filter((room) => {
-    const open = parseTimeOfDay(room.openedAt) ?? 0;
-    const close = parseTimeOfDay(room.closedAt) ?? 24 * 60;
+    const { open, close } = roomHours(room);
     return nowMin >= open && nowMin < close && !isRoomBusy(blocksByRoom[room.id] ?? [], nowMin);
   }).length;
   const pendingCount = dayBookings.filter((b) => b.status === BookingStatus.Waiting).length;
@@ -139,14 +136,13 @@ export function RoomCalendarScreen() {
 
   /** Longest end ≤ start + `minutes` before the room closes or the next taken block. */
   const endFor = (room: RoomDto, start: number, minutes: number) => {
-    const close = parseTimeOfDay(room.closedAt) ?? 24 * 60;
+    const { close } = roomHours(room);
     const nextStart = Math.min(...takenBlocks(room).filter((b) => b.startMin > start).map((b) => b.startMin), Infinity);
     return Math.min(start + minutes, close, nextStart);
   };
 
   const onPressSlot = (room: RoomDto, minute: number) => {
-    const open = parseTimeOfDay(room.openedAt) ?? 0;
-    const close = parseTimeOfDay(room.closedAt) ?? 24 * 60;
+    const { open, close } = roomHours(room);
     if (minute < open || minute + 30 > close) {
       toast.info(t('rooms.outsideHours', { open: formatMinutes(open), close: formatMinutes(close) }));
       return;
@@ -295,8 +291,8 @@ export function RoomCalendarScreen() {
           blocksByRoom={blocksByRoom}
           crossLevel={crossLevel}
           dateKey={dateKey}
-          startHour={GRID_START_HOUR}
-          endHour={GRID_END_HOUR}
+          startHour={BOOKING_HOURS.start}
+          endHour={BOOKING_HOURS.end}
           selection={selection}
           blockTitle={(block) => visibleTitle(block.bookings[0])}
           onPressBlock={onPressBlock}

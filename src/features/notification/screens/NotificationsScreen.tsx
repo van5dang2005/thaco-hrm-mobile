@@ -21,6 +21,7 @@ import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/shared/ui/StateViews';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
+import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
 
 import { notificationsApi } from '../api/notification.api';
 import { useUnreadCount } from '../hooks/useUnreadCount';
@@ -48,6 +49,7 @@ export function NotificationsScreen() {
     enabled: connected[service],
   });
   const items = flattenPages(query.data?.pages);
+  const pull = usePullRefresh(() => query.refetch());
 
   const refreshBadges = () => {
     void queryClient.invalidateQueries({ queryKey: qk.notifications.unread(service) });
@@ -158,7 +160,7 @@ export function NotificationsScreen() {
           keyExtractor={(item) => item.id}
           renderItem={renderItem}
           contentContainerStyle={{ padding: SHEET_PADDING.horizontal, paddingTop: SHEET_PADDING.top, paddingBottom: SHEET_PADDING.bottom, gap: 10 }}
-          refreshControl={<RefreshControl refreshing={query.isRefetching && !query.isFetchingNextPage} onRefresh={() => void query.refetch()} />}
+          refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={() => void pull.onRefresh()} />}
           onEndReachedThreshold={0.4}
           onEndReached={() => {
             if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();

@@ -33,6 +33,8 @@ export type BookingDraft = {
   links: string[];
   /** Edit: documents already on the booking that should be kept. */
   keptAttachments: BookingAttachment[];
+  /** Create: the organiser was already pre-added as host (like the web form), so removing them sticks. */
+  hostSeeded?: boolean;
 };
 
 

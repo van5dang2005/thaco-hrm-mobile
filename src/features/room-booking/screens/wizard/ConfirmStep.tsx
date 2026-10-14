@@ -117,7 +117,7 @@ export function ConfirmStep() {
             ? t('booking.conflictNote')
             : t('booking.afterSubmitNoteSingle');
   const lastSession = labels.sessions[labels.sessions.length - 1];
-  const datesShort = labels.recurring && lastSession && lastSession !== draft.dateKey ? `${labels.dayShort} → ${formatKey(lastSession, false)}` : labels.dayShort;
+  const datesShort = labels.recurring && lastSession && lastSession !== draft.dateKey ? `${labels.dayShort} → ${formatKey(lastSession)}` : labels.dayShort;
 
   if (!draft.roomId) return <Redirect href="/rooms/book" />;
 

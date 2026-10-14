@@ -22,6 +22,7 @@ import { StatStrip } from '@/shared/ui/StatStrip';
 import { EmptyState, ErrorState } from '@/shared/ui/StateViews';
 import { Text } from '@/shared/ui/Text';
 import { TextField } from '@/shared/ui/TextField';
+import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
 
 import { parcelsApi } from '../../api/parcel.api';
 import { ReceptionParcelCard } from '../../components/ReceptionParcelCard';
@@ -67,6 +68,7 @@ export function ReceptionListScreen() {
     enabled: connected && allowed,
   });
   const items = flattenPages(query.data?.pages);
+  const pull = usePullRefresh(() => Promise.all([query.refetch(), stats.refetch()]));
   // Parcels handed over (or cancelled) since they were ticked drop out of the selection.
   const selected = picked.filter((id) => items.some((p) => p.id === id && isOpenParcel(p.status)));
   const department = departments.data?.find((d) => d.id === departmentId);
@@ -179,13 +181,7 @@ export function ReceptionListScreen() {
             />
           )}
           refreshControl={
-            <RefreshControl
-              refreshing={query.isRefetching && !query.isFetchingNextPage}
-              onRefresh={() => {
-                void query.refetch();
-                void stats.refetch();
-              }}
-            />
+            <RefreshControl refreshing={pull.refreshing} onRefresh={() => void pull.onRefresh()} />
           }
           onEndReachedThreshold={0.4}
           onEndReached={() => {

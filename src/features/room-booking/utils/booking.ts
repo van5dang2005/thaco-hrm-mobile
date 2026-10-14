@@ -4,7 +4,7 @@
  */
 import type { RoomDepartment, RoomUser } from '@/core/session/userTypes';
 import { sameId } from '@/core/session/userTypes';
-import { addDays, diffDays, formatMinutes, minutesOfDay, parseServerDate, parseTimeOfDay, toDateKey, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
+import { addDays, diffDays, formatMinutes, minutesOfDay, parseServerDate, parseTimeOfDay, time, toDateKey, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
 
 import {
   ApprovalActionType,
@@ -147,7 +147,18 @@ export type RoomCheckInput = {
   today?: DateKey;
 };
 
-const hhmm = (value?: string | null) => (value ?? '').slice(0, 5);
+/**
+ * Opening hours of a room in Vietnam minutes; the whole day when either one is unset (no limit, like the
+ * server). ValidateBookingWithinOperatingHoursAsync compares `openedAt` / `closedAt` with the booking's
+ * UTC time of day, so they are UTC times: 00:00–11:00 is 07:00–18:00 in Vietnam. Capped at 24:00.
+ */
+export function roomHours(room: Pick<RoomDto, 'openedAt' | 'closedAt'> | null | undefined): { open: number; close: number } {
+  const open = parseTimeOfDay(room?.openedAt);
+  const close = parseTimeOfDay(room?.closedAt);
+  if (open === null || close === null) return { open: 0, close: 24 * 60 };
+  const offset = time.VN_OFFSET_MS / 60_000;
+  return { open: Math.min(open + offset, 24 * 60), close: Math.min(close + offset, 24 * 60) };
+}
 
 export function evaluateRoom({ room, sessions, startMin, endMin, people, bookings, crossLevel, excludeGroupId, today = todayKey() }: RoomCheckInput): RoomCheck {
   const warnings: RoomWarning[] = [];
@@ -156,11 +167,10 @@ export function evaluateRoom({ room, sessions, startMin, endMin, people, booking
   if (room.isActive === false) return blocked({ code: 'inactive' });
   if (crossLevel === 'blocked') return blocked({ code: 'crossLevel' });
 
-  const open = parseTimeOfDay(room.openedAt);
-  const close = parseTimeOfDay(room.closedAt);
-  // ValidateBookingWithinOperatingHoursAsync (opening hours read as Vietnam wall time, like the web app).
-  if (open !== null && close !== null && (startMin < open || endMin > close)) {
-    return blocked({ code: 'outsideHours', open: hhmm(room.openedAt), close: hhmm(room.closedAt) });
+  // ValidateBookingWithinOperatingHoursAsync (opening hours are UTC on the server, see roomHours).
+  const { open, close } = roomHours(room);
+  if (startMin < open || endMin > close) {
+    return blocked({ code: 'outsideHours', open: formatMinutes(open), close: formatMinutes(close) });
   }
 
   const last = sessions[sessions.length - 1];
@@ -362,7 +372,7 @@ export function extendOptions(b: BookingDto, room: RoomDto | null | undefined, s
   const to = bookingTo(b);
   if (!from || !to) return [];
   const end = minutesOfDay(to);
-  const close = parseTimeOfDay(room?.closedAt) ?? 23 * 60 + 45;
+  const { close } = roomHours(room);
   const day = toDateKey(to);
   return deltas
     .map((delta) => end + delta)
@@ -377,7 +387,7 @@ export function extendOptions(b: BookingDto, room: RoomDto | null | undefined, s
 export function allExtendDeltas(b: BookingDto, room: RoomDto | null | undefined): number[] {
   const to = bookingTo(b);
   if (!to) return [];
-  const close = parseTimeOfDay(room?.closedAt) ?? 23 * 60 + 45;
+  const { close } = roomHours(room);
   const span = Math.min(close, 24 * 60 - 15) - minutesOfDay(to);
   return Array.from({ length: Math.max(0, Math.floor(span / 15)) }, (_, i) => (i + 1) * 15);
 }
@@ -396,7 +406,7 @@ export function freeUntil(b: BookingDto, room: RoomDto | null | undefined, sameD
   if (!to) return null;
   const end = minutesOfDay(to);
   const day = toDateKey(to);
-  const close = parseTimeOfDay(room?.closedAt) ?? 24 * 60;
+  const { close } = roomHours(room);
   const next = sameDayBookings
     .filter((o) => blocksExtension(o, b, room) && toDateKey(bookingFrom(o) ?? new Date(0)) === day)
     .map((o) => minutesOfDay(bookingFrom(o)!))

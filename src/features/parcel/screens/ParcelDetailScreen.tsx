@@ -28,6 +28,7 @@ import { ErrorState } from '@/shared/ui/StateViews';
 import { parcelBadgeKind } from '@/shared/ui/status';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
+import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
 
 import { parcelsApi } from '../api/parcel.api';
 import { daysLeftLabel, LifecyclePanel } from '../components/DeadlineBars';
@@ -46,6 +47,7 @@ export function ParcelDetailScreen() {
   const { fg, text2 } = useHeaderColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const parcel = useParcel(id);
+  const pull = usePullRefresh(() => parcel.refetch());
   const me = useParcelMe();
   const { has } = useCapabilities();
   const reception = has('parcel.reception');
@@ -201,7 +203,7 @@ export function ParcelDetailScreen() {
       floating={info}
       floatingScrolls
       footer={actions.length ? actions : undefined}
-      refreshControl={<RefreshControl refreshing={parcel.isRefetching} onRefresh={() => void parcel.refetch()} />}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={() => void pull.onRefresh()} />}
     >
       {p.attachments.length ? (
         <Card className="gap-2.5 p-3.5">

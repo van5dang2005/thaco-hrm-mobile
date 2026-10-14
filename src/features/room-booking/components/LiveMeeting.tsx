@@ -2,84 +2,13 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { formatMinutes, formatTime } from '@/core/time/vn';
-import { useNow } from '@/shared/hooks/useNow';
+import { formatMinutes } from '@/core/time/vn';
 import { Card } from '@/shared/ui/Card';
 import { Icon } from '@/shared/ui/Icon';
-import { CheckIcon, DoorOpenIcon, TriangleAlertIcon, UsersIcon } from '@/shared/ui/icons';
-import { ProgressBar } from '@/shared/ui/ProgressBar';
-import { onBlue, useHeaderColors } from '@/shared/ui/ScreenShell';
+import { CheckIcon, TriangleAlertIcon } from '@/shared/ui/icons';
 import { Text } from '@/shared/ui/Text';
 
-import type { BookingDto } from '../types';
-import { bookingFrom, bookingTo, type ExtendOption } from '../utils/booking';
-
-/** Minutes to the start (upcoming), to the end (live) or since the end (extend window). */
-export function countdown(booking: BookingDto, now: Date) {
-  const from = bookingFrom(booking);
-  const to = bookingTo(booking);
-  if (!from || !to) return null;
-  const upcoming = now < from;
-  const live = now >= from && now < to;
-  const target = upcoming ? from : to;
-  const minutes = Math.max(0, Math.round(Math.abs(target.getTime() - now.getTime()) / 60_000));
-  const progress = Math.min(1, Math.max(0, (now.getTime() - from.getTime()) / (to.getTime() - from.getTime())));
-  return { phase: upcoming ? ('upcoming' as const) : live ? ('live' as const) : ('ended' as const), minutes, progress, from, to };
-}
-
-/**
- * Blue header of a meeting in progress (6c): "● Đang diễn ra", title, the time range in large mono
- * with "còn N phút", a green progress bar, then room and people.
- */
-export function LiveHeader({ booking, title, roomLine, people }: { booking: BookingDto; title: string; roomLine: string; people: string }) {
-  const { t } = useTranslation();
-  const { colors } = useTheme();
-  const { fg, text2 } = useHeaderColors();
-  const now = useNow(15_000);
-  const c = countdown(booking, now);
-  if (!c) return null;
-  const green = colors['header-dot-live'];
-  const phaseLabel = c.phase === 'live' ? t('status.bookingPhase.live') : c.phase === 'upcoming' ? t('meeting.startsIn') : t('meeting.endedAgo');
-  const left = c.phase === 'live' ? t('meeting.leftMinutes', { count: c.minutes }) : c.phase === 'upcoming' ? t('meeting.minutes', { count: c.minutes }) : '';
-  return (
-    <View testID="live-meeting-panel" className="gap-2.5">
-      <View className="h-6 flex-row items-center gap-1.5 self-start rounded-full px-2.5" style={{ backgroundColor: onBlue(0.14) }}>
-        <View className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: green }} />
-        <Text weight="bold" style={{ fontSize: 11.5, lineHeight: 15, color: fg }}>
-          {phaseLabel}
-        </Text>
-      </View>
-      <Text weight="bold" numberOfLines={2} accessibilityRole="header" style={{ fontSize: 22, lineHeight: 28, letterSpacing: -0.3, color: fg }}>
-        {title}
-      </Text>
-      <View className="flex-row items-end justify-between gap-3">
-        <Text mono weight="bold" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={1.1} style={{ fontSize: 30, lineHeight: 36, color: fg }}>
-          {`${formatTime(c.from)} - ${formatTime(c.to)}`}
-        </Text>
-        {left ? (
-          <Text mono weight="semibold" numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 17, color: green, paddingBottom: 4 }}>
-            {left}
-          </Text>
-        ) : null}
-      </View>
-      <ProgressBar value={c.progress} color={green} height={5} onHeader />
-      <View className="flex-row items-center gap-3">
-        <View className="min-w-0 flex-shrink flex-row items-center gap-1.5">
-          <Icon icon={DoorOpenIcon} size={13} rawColor={text2} />
-          <Text numberOfLines={1} className="flex-shrink" style={{ fontSize: 12.5, lineHeight: 16, color: text2 }}>
-            {roomLine}
-          </Text>
-        </View>
-        <View className="flex-row items-center gap-1.5">
-          <Icon icon={UsersIcon} size={13} rawColor={text2} />
-          <Text numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 16, color: text2 }}>
-            {people}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-}
+import type { ExtendOption } from '../utils/booking';
 
 type ExtendProps = {
   /** The three quick chips (+15′, +30′, +60′). */

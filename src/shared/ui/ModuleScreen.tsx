@@ -1,4 +1,4 @@
-import type { ReactNode, Ref } from 'react';
+import { cloneElement, isValidElement, type ReactNode, type Ref } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -29,7 +29,8 @@ type Props = {
   overlay?: ReactNode;
   /**
    * The floating card scrolls with the content (tall summaries on detail screens): it sits on a 26pt
-   * blue band at the top of the scroll view, so pass the header a smaller `bottom` (18).
+   * blue band at the top of the scroll view, so pass the header a smaller `bottom` (18). The band stays
+   * joined to the header: pulling down stretches the blue instead of opening a gap under the header.
    */
   floatingScrolls?: boolean;
   /**
@@ -46,18 +47,28 @@ export function ModuleScreen({ header, floating, children, footer, footerNote, b
   const bg = background === 'home' ? colors['home-bg'] : colors.canvas;
 
   if (floatingScrolls) {
+    // The scroll view's own background is the header blue, so the pull-down area above the band is blue
+    // (with a light spinner); the content keeps the canvas, also past its end when it bounces.
+    const banded = !!floating;
     return (
       <KeyboardAvoidingView testID={testID} behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1" style={{ backgroundColor: bg }}>
         {header}
         <View className="flex-1">
-          <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled" refreshControl={refreshControl} contentContainerStyle={{ paddingBottom: CONTENT_PADDING.bottom }}>
-            {floating ? (
+          <ScrollView
+            ref={scrollRef}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={banded && isValidElement(refreshControl) ? cloneElement(refreshControl, { tintColor: colors['header-name'] }) : refreshControl}
+            style={banded ? { backgroundColor: colors.header } : undefined}
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: CONTENT_PADDING.bottom, backgroundColor: bg }}
+          >
+            {banded ? (
               <>
                 <View style={{ height: 26, backgroundColor: colors.header }} />
                 <View style={{ zIndex: 1 }}>{floating}</View>
               </>
             ) : null}
             <View style={{ paddingHorizontal: CONTENT_PADDING.horizontal, paddingTop: CONTENT_PADDING.top, gap: CONTENT_PADDING.gap }}>{children}</View>
+            {banded ? <View pointerEvents="none" style={{ position: 'absolute', top: '100%', left: 0, right: 0, height: 800, backgroundColor: bg }} /> : null}
           </ScrollView>
           {overlay}
         </View>

@@ -18,8 +18,8 @@ export function useDraftLabels(draft: BookingDraft) {
     recurring,
     time: `${formatMinutes(draft.startMin)}–${formatMinutes(draft.endMin)}`,
     timeSpaced: `${formatMinutes(draft.startMin)} – ${formatMinutes(draft.endMin)}`,
-    /** "T2 05/10" */
-    dayShort: `${weekdayShort} ${formatKey(draft.dateKey, false)}`,
+    /** "T2 05/10/2026" */
+    dayShort: `${weekdayShort} ${formatKey(draft.dateKey)}`,
     /** "Hằng tuần × 5" or null. */
     repeat: recurring ? t('booking.repeatTimes', { recurrence: recurrenceName, count: sessions.length }) : null,
     /** "Hằng tuần · 5 buổi" / "Một buổi". */

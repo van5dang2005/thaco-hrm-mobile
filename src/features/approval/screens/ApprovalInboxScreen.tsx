@@ -35,6 +35,7 @@ import { StatStrip } from '@/shared/ui/StatStrip';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
+import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
 
 import { approvalsApi } from '../api/approval.api';
 import { ApprovalCard } from '../components/ApprovalCard';
@@ -99,6 +100,7 @@ export function ApprovalInboxScreen() {
     enabled: connected,
   });
   const all = flattenPages(query.data?.pages);
+  const pull = usePullRefresh(() => Promise.all([query.refetch(), stats.refetch()]));
   const items = (tab === 'series' ? all.filter((i) => isSeries(i.booking)) : all).slice().sort((a, b) => (a.booking?.from ?? '').localeCompare(b.booking?.from ?? ''));
   const seriesCount = pendingTab ? all.filter((i) => isSeries(i.booking)).length : 0;
 
@@ -227,13 +229,7 @@ export function ApprovalInboxScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ paddingHorizontal: CONTENT_PADDING.horizontal, paddingTop: CONTENT_PADDING.top, paddingBottom: selected.length ? 120 : CONTENT_PADDING.bottom, gap: 12 }}
           refreshControl={
-            <RefreshControl
-              refreshing={query.isRefetching && !query.isFetchingNextPage}
-              onRefresh={() => {
-                void query.refetch();
-                void stats.refetch();
-              }}
-            />
+            <RefreshControl refreshing={pull.refreshing} onRefresh={() => void pull.onRefresh()} />
           }
           onEndReachedThreshold={0.4}
           onEndReached={() => {

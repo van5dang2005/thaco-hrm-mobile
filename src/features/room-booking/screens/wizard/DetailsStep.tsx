@@ -1,6 +1,6 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { Redirect, router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, Switch, TextInput, View } from 'react-native';
 import { z } from 'zod';
@@ -35,10 +35,15 @@ import { useBookingDraft, type DraftParticipant } from '../../store/draftStore';
 import { MAX_DOCUMENT_BYTES, MAX_DOCUMENTS } from '../../utils/booking';
 import { serviceIcon } from '../../utils/serviceIcon';
 
+/** Same rules as the web form (GeneralInfo / RegistrationInfo); `participant` is nvarchar(255) on the server. */
 const detailsSchema = z.object({
   content: z.string().trim().min(1, 'booking.requiredContent').max(500),
+  participantText: z.string().trim().min(1, 'booking.requiredParticipantText').max(255),
+  phone: z.union([z.literal(''), z.string().regex(/^0/, 'booking.phoneStartZero').regex(/^\d{10,11}$/, 'booking.phoneLength')]),
   links: z.array(z.string().regex(/^https?:\/\/\S+$/i, 'booking.invalidLink')),
 });
+
+const asHost = (user: RoomUser): DraftParticipant => ({ user, isHost: true, isPrepareContent: false });
 
 const linkSchema = z.string().trim().regex(/^https?:\/\/\S+$/i);
 
@@ -62,11 +67,19 @@ export function DetailsStep() {
   const [error, setError] = useState<string | null>(null);
   const [contentFocused, setContentFocused] = useState(false);
 
+  // Like the web form, a new booking starts with the organiser as host.
+  useEffect(() => {
+    if (draft.mode !== 'create' || draft.hostSeeded || !me.data) return;
+    const mine = draft.participants.some((p) => sameId(p.user.id, me.data!.id));
+    patch({ hostSeeded: true, participants: mine ? draft.participants : [asHost(me.data), ...draft.participants] });
+  }, [draft.mode, draft.hostSeeded, draft.participants, me.data, patch]);
+
   if (!draft.roomId) return <Redirect href="/rooms/book" />;
 
   const participants = draft.participants;
   const host = participants.find((p) => p.isHost);
-  const documentCount = draft.keptAttachments.length + draft.files.length + draft.links.length;
+  // The 5-document limit (LIMIT_5_ATTACHMENTS) counts files only; links are not limited, as on the web.
+  const fileCount = draft.keptAttachments.length + draft.files.length;
   const phone = draft.phone || me.data?.phoneNumber || '';
   const services = (room?.services ?? []).filter((s) => s.isActive !== false);
 
@@ -78,7 +91,8 @@ export function DetailsStep() {
   const pickFiles = async () => {
     const result = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
     if (result.canceled) return;
-    const slots = MAX_DOCUMENTS - documentCount;
+    const slots = MAX_DOCUMENTS - fileCount;
+    if (slots <= 0) return void toast.error(t('booking.tooManyFiles'));
     const accepted = result.assets.filter((asset) => {
       if ((asset.size ?? 0) > MAX_DOCUMENT_BYTES) {
         toast.error(t('booking.fileTooLarge', { name: asset.name }));
@@ -92,12 +106,15 @@ export function DetailsStep() {
     });
   };
 
-  const addDocument = () =>
+  const addDocument = () => {
+    // Files are full: only a link can still be added.
+    if (fileCount >= MAX_DOCUMENTS) return setLinkInput('');
     Alert.alert(t('booking.addDocument'), undefined, [
       { text: t('booking.addFileOption'), onPress: () => void pickFiles() },
       { text: t('booking.addLinkOption'), onPress: () => setLinkInput('') },
       { text: t('common.cancel'), style: 'cancel' },
     ]);
+  };
 
   const confirmRemove = (name: string, remove: () => void) =>
     Alert.alert(t('booking.removeDocumentTitle'), name, [
@@ -114,13 +131,18 @@ export function DetailsStep() {
   };
 
   const review = () => {
-    const parsed = detailsSchema.safeParse({ content: draft.content, links: draft.links });
+    const parsed = detailsSchema.safeParse({ content: draft.content, participantText: draft.participantText, phone, links: draft.links });
     if (!parsed.success) {
       setError(t(parsed.error.issues[0].message as 'booking.requiredContent'));
       return;
     }
     setError(null);
     if (!draft.phone && phone) patch({ phone });
+    // Web rule: without a chosen host, the organiser becomes the host.
+    if (!host && me.data) {
+      const mine = participants.some((p) => sameId(p.user.id, me.data!.id));
+      patch({ participants: mine ? participants.map((p) => (sameId(p.user.id, me.data!.id) ? { ...p, isHost: true } : p)) : [asHost(me.data), ...participants] });
+    }
     router.push('/rooms/book/confirm');
   };
 
@@ -333,7 +355,7 @@ export function DetailsStep() {
             {t('booking.documents')}
           </Text>
           <Text className="text-subtle" style={{ fontSize: 11.5, lineHeight: 15 }}>
-            {t('booking.documentsLimit', { count: documentCount })}
+            {t('booking.documentsLimit', { count: fileCount })}
           </Text>
         </View>
         <View className="flex-row flex-wrap gap-2">
@@ -346,17 +368,15 @@ export function DetailsStep() {
           {draft.links.map((link, index) => (
             <DocumentChip key={`${link}-${index}`} name={link} link onPress={() => confirmRemove(link, () => patch({ links: draft.links.filter((_, i) => i !== index) }))} />
           ))}
-          {documentCount < MAX_DOCUMENTS ? (
-            <Pressable
-              testID="booking-add-document"
-              accessibilityRole="button"
-              accessibilityLabel={t('booking.addDocument')}
-              onPress={addDocument}
-              className="h-11 w-11 items-center justify-center rounded-[12px] border-[1.5px] border-dashed border-line-strong active:opacity-70"
-            >
-              <Icon icon={PlusIcon} size={18} color="muted" />
-            </Pressable>
-          ) : null}
+          <Pressable
+            testID="booking-add-document"
+            accessibilityRole="button"
+            accessibilityLabel={t('booking.addDocument')}
+            onPress={addDocument}
+            className="h-11 w-11 items-center justify-center rounded-[12px] border-[1.5px] border-dashed border-line-strong active:opacity-70"
+          >
+            <Icon icon={PlusIcon} size={18} color="muted" />
+          </Pressable>
         </View>
       </Card>
 
@@ -365,13 +385,29 @@ export function DetailsStep() {
           {t('booking.moreInfo')}
         </Text>
         <TextField
+          testID="booking-participant-text"
           appearance="ios"
-          label={t('booking.otherParticipants')}
+          label={`${t('booking.otherParticipants')} *`}
           placeholder={t('booking.otherParticipantsPlaceholder')}
           value={draft.participantText}
-          onChangeText={(participantText) => patch({ participantText })}
+          maxLength={255}
+          onChangeText={(participantText) => {
+            setError(null);
+            patch({ participantText });
+          }}
         />
-        <TextField appearance="ios" label={t('booking.phone')} keyboardType="phone-pad" value={draft.phone || phone} onChangeText={(value) => patch({ phone: value })} maxLength={20} />
+        <TextField
+          testID="booking-phone"
+          appearance="ios"
+          label={t('booking.phone')}
+          keyboardType="number-pad"
+          value={phone}
+          maxLength={11}
+          onChangeText={(value) => {
+            setError(null);
+            patch({ phone: value.replace(/\D/g, '').slice(0, 11) });
+          }}
+        />
       </Card>
 
       <UserPicker<PersonOf<RoomUser>>

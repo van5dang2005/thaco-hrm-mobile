@@ -5,7 +5,7 @@ import { qk } from '@/core/query/keys';
 import { useCapabilities } from '@/core/session/capabilities';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { sameId } from '@/core/session/userTypes';
-import { addDays, atMinutes, formatKey, minutesOfDay, parseTimeOfDay, todayKey, type DateKey } from '@/core/time/vn';
+import { addDays, atMinutes, formatKey, minutesOfDay, todayKey, type DateKey } from '@/core/time/vn';
 import { useApprovalStats } from '@/features/approval/hooks/useApprovalStats';
 import { parcelsApi } from '@/features/parcel/api/parcel.api';
 import { useMyParcelStats } from '@/features/parcel/hooks/useMyParcelStats';
@@ -17,7 +17,7 @@ import { useDefaultAreaId } from '@/features/room-booking/hooks/useDefaultAreaId
 import { useRooms } from '@/features/room-booking/hooks/useRooms';
 import { useSchedule } from '@/features/room-booking/hooks/useSchedule';
 import { BookingStatus, type BookingDto } from '@/features/room-booking/types';
-import { bookingFrom, bookingTo } from '@/features/room-booking/utils/booking';
+import { bookingFrom, bookingTo, roomHours } from '@/features/room-booking/utils/booking';
 
 import { useHomePrefs } from '../store/homePrefs';
 
@@ -86,8 +86,7 @@ export function useFreeRooms(enabled: boolean): Signal<FreeRooms> {
   const now = new Date();
   const nowMin = minutesOfDay(now);
   const free = rooms.data.map((room) => {
-    const open = parseTimeOfDay(room.openedAt) ?? 0;
-    const close = parseTimeOfDay(room.closedAt) ?? 24 * 60;
+    const { open, close } = roomHours(room);
     if (nowMin < open || nowMin >= close) return false;
     return !schedule.data.some((b) => {
       if (!sameId(b.roomId ?? b.room?.id, room.id)) return false;

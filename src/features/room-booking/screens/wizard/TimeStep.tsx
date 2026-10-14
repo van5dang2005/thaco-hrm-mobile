@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { sameId } from '@/core/session/userTypes';
-import { addDays, atMinutes, formatKey, formatMinutes, minutesOfDay, parseTimeOfDay, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
+import { addDays, atMinutes, formatKey, formatMinutes, minutesOfDay, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
 import { useNow } from '@/shared/hooks/useNow';
 import { cn } from '@/shared/lib/cn';
 import { Banner } from '@/shared/ui/Banner';
@@ -12,7 +12,7 @@ import { Button } from '@/shared/ui/Button';
 import { DatePickerSheet } from '@/shared/ui/DatePickerSheet';
 import { Icon } from '@/shared/ui/Icon';
 import { NumberStepper } from '@/shared/ui/NumberStepper';
-import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, DoorOpenIcon, InfoIcon, RepeatIcon, UsersIcon } from '@/shared/ui/icons';
+import { CalendarDaysIcon, ChevronLeftIcon, ChevronRightIcon, DoorOpenIcon, InfoIcon, RepeatIcon, UsersIcon } from '@/shared/ui/icons';
 import { Segmented } from '@/shared/ui/Segmented';
 import { SelectSheet } from '@/shared/ui/SelectSheet';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
@@ -33,8 +33,8 @@ import { useRooms } from '../../hooks/useRooms';
 import { useSchedule } from '../../hooks/useSchedule';
 import { useGoToStep } from '../../hooks/useWizardNavigation';
 import { draftSessions, useBookingDraft } from '../../store/draftStore';
-import { buildSlots, busyFromBlocks, nextRange, rangeFromMinutes, rangeMinutes, splitDuration, type SlotRange } from '../../utils/availability';
-import { evaluateRoom, MAX_SESSIONS, roomDayBlocks, type Recurrence } from '../../utils/booking';
+import { BOOKING_HOURS, buildSlots, busyFromBlocks, nextRange, rangeFromMinutes, rangeMinutes, splitDuration, type SlotRange } from '../../utils/availability';
+import { evaluateRoom, MAX_SESSIONS, roomDayBlocks, roomHours, type Recurrence } from '../../utils/booking';
 import { useRoomMeta } from './RoomStep';
 
 /** B2 (4b): pick a contiguous range of 30-minute slots, people and repetition. */
@@ -62,11 +62,16 @@ export function TimeStep() {
 
   const editGroup = draft.mode === 'edit' ? draft.edit?.groupId : undefined;
   const bookings = (schedule.data ?? []).filter((b) => !(editGroup && sameId(b.groupId, editGroup)));
-  const open = parseTimeOfDay(room?.openedAt) ?? 0;
-  const close = parseTimeOfDay(room?.closedAt) ?? 24 * 60;
+  const { open, close } = roomHours(room);
   const isToday = draft.dateKey === today;
   const busy = busyFromBlocks(roomDayBlocks(bookings.filter((b) => sameId(b.roomId ?? b.room?.id, draft.roomId)), draft.dateKey));
-  const slots = room ? buildSlots({ open, close, busy, blockPending: !!room.isDisableOverlappingTimes, nowMin: isToday ? minutesOfDay(now) : null }) : [];
+  // The grid follows the room's opening hours from the API; 07:00–20:00 when the room has none set.
+  const unlimited = open === 0 && close === 24 * 60;
+  const gridFrom = unlimited ? BOOKING_HOURS.start * 60 : Math.ceil(open / 30) * 30;
+  const gridTo = unlimited ? BOOKING_HOURS.end * 60 : close;
+  const slots = room
+    ? buildSlots({ from: gridFrom, to: gridTo, open, close, busy, blockPending: !!room.isDisableOverlappingTimes, nowMin: isToday ? minutesOfDay(now) : null })
+    : [];
   // Until the user taps, the grid shows the draft's times when they still fit.
   const range = picked === undefined ? rangeFromMinutes(slots, draft.startMin, draft.endMin) : picked;
   const pendingInRange = !!range && slots.slice(range.start, range.end + 1).some((s) => s.state === 'pending');
@@ -121,7 +126,7 @@ export function TimeStep() {
     <WizardHeader
       testID="booking-time-header"
       step={2}
-      right={<HeaderIconButton testID="booking-date" icon={CalendarIcon} label={t('booking.date')} onPress={() => setSheet('date')} />}
+      right={<HeaderIconButton testID="booking-date" icon={CalendarDaysIcon} label={t('booking.date')} onPress={() => setSheet('date')} />}
     />
   );
 
@@ -180,7 +185,7 @@ export function TimeStep() {
         <View className="h-11 flex-row items-center border-t border-line-2 px-1.5">
           <DayArrow icon={ChevronLeftIcon} label={t('rooms.previousDay')} disabled={draft.dateKey <= today} onPress={() => changeDay(addDays(draft.dateKey, -1))} />
           <Pressable testID="booking-date-label" accessibilityRole="button" accessibilityLabel={dayLabel} onPress={() => setSheet('date')} className="h-11 flex-1 flex-row items-center justify-center gap-1.5 active:opacity-70">
-            <Icon icon={CalendarIcon} size={15} color="primary" />
+            <Icon icon={CalendarDaysIcon} size={15} color="primary" />
             <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 14, lineHeight: 19 }}>
               {dayLabel}
             </Text>

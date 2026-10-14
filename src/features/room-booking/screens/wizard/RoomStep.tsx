@@ -4,20 +4,23 @@ import { useTranslation } from 'react-i18next';
 import { FlatList, Pressable, RefreshControl, ScrollView, View } from 'react-native';
 
 import { sameId } from '@/core/session/userTypes';
-import { addDays, atMinutes, diffDays, formatKey, formatMinutes, minutesOfDay, parseTimeOfDay, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
+import { addDays, atMinutes, diffDays, formatKey, formatMinutes, minutesOfDay, todayKey, weekdayOf, type DateKey } from '@/core/time/vn';
 import { useNow } from '@/shared/hooks/useNow';
 import { cn } from '@/shared/lib/cn';
 import { Button } from '@/shared/ui/Button';
 import { Card, PressableCard } from '@/shared/ui/Card';
+import { DatePickerSheet } from '@/shared/ui/DatePickerSheet';
 import { HeaderIconButton } from '@/shared/ui/HeaderBar';
 import { Icon } from '@/shared/ui/Icon';
-import { CalendarIcon, CheckIcon, ChevronRightIcon, DoorOpenIcon, LockIcon, SquareCheckBigIcon } from '@/shared/ui/icons';
+import { CalendarDaysIcon, CheckIcon, ChevronDownIcon, ChevronRightIcon, DoorOpenIcon, LockIcon, SquareCheckBigIcon } from '@/shared/ui/icons';
 import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { RoundIcon } from '@/shared/ui/RoundIcon';
+import { useHeaderColors } from '@/shared/ui/ScreenShell';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/shared/ui/StateViews';
 import { StatusBadge } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
+import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
 
 import { AvailabilityBar } from '../../components/AvailabilityBar';
 import { DayStrip } from '../../components/DayStrip';
@@ -32,7 +35,7 @@ import { useLeaveWizard } from '../../hooks/useWizardNavigation';
 import { useBookingDraft } from '../../store/draftStore';
 import type { RoomDto } from '../../types';
 import { blockingBusy, busyFromBlocks, roomNow, type Busy, type RoomNow } from '../../utils/availability';
-import { roomDayBlocks } from '../../utils/booking';
+import { roomDayBlocks, roomHours } from '../../utils/booking';
 import { isOnlineService, serviceIcon } from '../../utils/serviceIcon';
 
 type Filter = 'all' | 'free' | 'seats' | 'online';
@@ -80,13 +83,17 @@ export function RoomStep() {
   const isToday = dateKey === today;
   const nowMin = minutesOfDay(now);
   const [filter, setFilter] = useState<Filter>('all');
-  const marked = useMyMeetingDays(today);
+  const [pickingDate, setPickingDate] = useState(false);
+  // The strip shows the 7-day block (counted from today) that holds the chosen day, so a day picked further out stays in view.
+  const stripStart = addDays(today, Math.floor(diffDays(today, dateKey) / 7) * 7);
+  const marked = useMyMeetingDays(stripStart);
   const roomMeta = useRoomMeta();
 
   const rooms = useRooms(areaId);
   const crossLevel = useCrossLevel();
   const levels = useApprovalLevels();
   const schedule = useSchedule({ fromDate: atMinutes(dateKey, 0).toISOString(), toDate: atMinutes(addDays(dateKey, 1), 0).toISOString(), areaId });
+  const pull = usePullRefresh(() => Promise.all([schedule.refetch(), rooms.refetch()]));
 
   const roomList = rooms.data ?? [];
   const editGroup = draft.mode === 'edit' ? draft.edit?.groupId : undefined;
@@ -95,8 +102,7 @@ export function RoomStep() {
   const cards: RoomCard[] = roomList.map((room) => {
     const busy = busyFromBlocks(roomDayBlocks(bookings.filter((b) => sameId(b.roomId ?? b.room?.id, room.id)), dateKey));
     const blocking = blockingBusy(busy, !!room.isDisableOverlappingTimes);
-    const open = parseTimeOfDay(room.openedAt) ?? 0;
-    const close = parseTimeOfDay(room.closedAt) ?? 24 * 60;
+    const { open, close } = roomHours(room);
     const beyondLimit = !!room.isDayLimited && room.maxAdvanceRegistrationDays != null && diffDays(today, dateKey) > room.maxAdvanceRegistrationDays;
     return {
       room,
@@ -127,6 +133,7 @@ export function RoomStep() {
   });
 
   const loaded = !rooms.isLoading && !schedule.isLoading;
+  const maxKey = maxBookableDay(roomList, today);
 
   const choose = (room: RoomDto) => {
     const available = new Set((room.services ?? []).map((s) => s.id.toLowerCase()));
@@ -150,10 +157,11 @@ export function RoomStep() {
       step={1}
       onBack={leave}
       onAreaChange={(value) => patch({ areaId: value, roomId: undefined })}
-      right={<HeaderIconButton testID="booking-my-calendar" icon={CalendarIcon} label={t('booking.myCalendar')} onPress={() => router.push('/calendar')} />}
+      right={<HeaderIconButton testID="booking-pick-date" icon={CalendarDaysIcon} label={t('booking.date')} onPress={() => setPickingDate(true)} />}
       bottom={20}
     >
-      <DayStrip testID="booking-day" value={dateKey} onChange={changeDay} start={today} maxKey={maxBookableDay(roomList, today)} marked={marked} />
+      <DayLabel dateKey={dateKey} onPress={() => setPickingDate(true)} />
+      <DayStrip testID="booking-day" value={dateKey} onChange={changeDay} start={stripStart} maxKey={maxKey} marked={marked} className="mt-2" />
     </WizardHeader>
   );
 
@@ -161,7 +169,7 @@ export function RoomStep() {
     <>
       <View className="min-w-0 flex-1">
         <Text numberOfLines={1} className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
-          {`${t(`time.weekdayShort.${String(weekdayOf(dateKey)) as '0'}`)}, ${formatKey(dateKey, false)}`}
+          {t('booking.rowRoom')}
         </Text>
         <Text weight="bold" numberOfLines={1} className="text-ink" style={{ fontSize: 15, lineHeight: 20 }}>
           {selected?.room.name ?? t('booking.noRoomSelected')}
@@ -190,7 +198,7 @@ export function RoomStep() {
         <FlatList
           style={{ flex: 1, minHeight: 0 }}
           contentContainerStyle={{ gap: 12, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 24 }}
-          refreshControl={<RefreshControl refreshing={schedule.isRefetching} onRefresh={() => void Promise.all([schedule.refetch(), rooms.refetch()])} />}
+          refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={() => void pull.onRefresh()} />}
           data={loaded ? shown : []}
           keyExtractor={(card) => String(card.room.id)}
           renderItem={({ item: card, index }) => (
@@ -241,11 +249,43 @@ export function RoomStep() {
           }
         />
       </View>
+      <DatePickerSheet
+        testID="booking-date-sheet"
+        visible={pickingDate}
+        onClose={() => setPickingDate(false)}
+        title={t('booking.date')}
+        value={dateKey}
+        minDate={today}
+        maxDate={maxKey}
+        onSelect={changeDay}
+      />
     </ModuleScreen>
   );
 }
 
 /** Filter chip of 4a: ink fill when selected, white with a hairline otherwise. */
+/** "Thứ Tư, 14/10/2026 ⌄" above the day strip; opens the date picker. */
+function DayLabel({ dateKey, onPress }: { dateKey: DateKey; onPress: () => void }) {
+  const { t } = useTranslation();
+  const { fg, text3 } = useHeaderColors();
+  const label = `${t(`time.weekday.${String(weekdayOf(dateKey)) as '0'}`)}, ${formatKey(dateKey)}`;
+  return (
+    <Pressable
+      testID="booking-day-label"
+      accessibilityRole="button"
+      accessibilityLabel={`${t('booking.date')}: ${label}`}
+      onPress={onPress}
+      hitSlop={8}
+      className="mt-3 flex-row items-center gap-1 self-start active:opacity-70"
+    >
+      <Text weight="bold" numberOfLines={1} style={{ fontSize: 16, lineHeight: 21, color: fg }}>
+        {label}
+      </Text>
+      <Icon icon={ChevronDownIcon} size={13} weight="bold" rawColor={text3} />
+    </Pressable>
+  );
+}
+
 export function FilterPill({ label, selected, onPress, testID }: { label: string; selected: boolean; onPress: () => void; testID?: string }) {
   return (
     <Pressable

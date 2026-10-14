@@ -16,6 +16,7 @@ import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/shared/ui/StateViews';
 import { StatusTabs, type StatusTabItem } from '@/shared/ui/StatusTabs';
 import { Text } from '@/shared/ui/Text';
+import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
 
 import { parcelsApi } from '../api/parcel.api';
 import { ParcelCard } from '../components/ParcelCard';
@@ -45,6 +46,7 @@ export function MyParcelsScreen() {
     enabled: connected,
   });
   const items = flattenPages(query.data?.pages);
+  const pull = usePullRefresh(() => Promise.all([query.refetch(), stats.refetch()]));
 
   const tabs: StatusTabItem<ParcelTab>[] = [
     { key: 'pending', label: t('parcels.tabPending'), count: stats.data?.waiting, tone: 'wait', testID: 'parcels-tab-pending' },
@@ -85,13 +87,7 @@ export function MyParcelsScreen() {
             <ParcelCard parcel={item} myCode={me.data?.employeeCode} onPress={() => router.push({ pathname: '/parcels/[id]', params: { id: item.id } })} />
           )}
           refreshControl={
-            <RefreshControl
-              refreshing={query.isRefetching && !query.isFetchingNextPage}
-              onRefresh={() => {
-                void query.refetch();
-                void stats.refetch();
-              }}
-            />
+            <RefreshControl refreshing={pull.refreshing} onRefresh={() => void pull.onRefresh()} />
           }
           onEndReachedThreshold={0.4}
           onEndReached={() => {

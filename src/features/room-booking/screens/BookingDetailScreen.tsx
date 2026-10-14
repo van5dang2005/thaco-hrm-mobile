@@ -10,37 +10,17 @@ import { qk } from '@/core/query/keys';
 import { useRoomMe } from '@/core/session/useMe';
 import { roomPerson, sameId } from '@/core/session/userTypes';
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { addDays, atMinutes, formatDayMonth, formatMinutes, formatTime, minutesOfDay, toDateKey, weekdayOf } from '@/core/time/vn';
+import { addDays, atMinutes, formatMinutes, minutesOfDay, toDateKey } from '@/core/time/vn';
 import { approvalsApi } from '@/features/approval/api/approval.api';
 import { ApproveSheet } from '@/features/approval/components/ApproveSheet';
 import { useNow } from '@/shared/hooks/useNow';
 import { downloadAndShare } from '@/shared/lib/download';
-import { AvatarStack } from '@/shared/ui/Avatar';
 import { Banner } from '@/shared/ui/Banner';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
-import { Card, FloatingCard, PressableCard } from '@/shared/ui/Card';
+import { Card } from '@/shared/ui/Card';
 import { HeaderIconButton } from '@/shared/ui/HeaderBar';
-import { Icon } from '@/shared/ui/Icon';
-import {
-  type AppIcon,
-  BellIcon,
-  CheckIcon,
-  ChevronRightIcon,
-  ClockIcon,
-  CoffeeIcon,
-  DoorOpenIcon,
-  EllipsisIcon,
-  FileTextIcon,
-  LinkIcon,
-  PhoneIcon,
-  SquareIcon,
-  UserIcon,
-  UsersIcon,
-  XIcon,
-  PresentationIcon,
-} from '@/shared/ui/icons';
-import { InfoRow } from '@/shared/ui/InfoRow';
+import { CheckIcon, EllipsisIcon, PresentationIcon, SquareIcon, XIcon } from '@/shared/ui/icons';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { NoteField } from '@/shared/ui/NoteField';
@@ -49,22 +29,23 @@ import { ProgressBar } from '@/shared/ui/ProgressBar';
 import { SelectSheet } from '@/shared/ui/SelectSheet';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { ErrorState } from '@/shared/ui/StateViews';
-import { BookingBadge, Tag } from '@/shared/ui/StatusBadge';
 import { Text } from '@/shared/ui/Text';
 import { toast } from '@/shared/ui/Toast';
+import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
 
 import { bookingsApi } from '../api/booking.api';
 import { ApprovalStepper, levelProgress } from '../components/ApprovalStepper';
-import { ExtendCard, LiveHeader } from '../components/LiveMeeting';
+import { ExtendCard } from '../components/LiveMeeting';
+import { DocumentsCard, ParticipantsCard, PlaceCard, RoleTags, ServicesCard, sortParticipants, type MeetingParticipant } from '../components/MeetingCards';
+import { MeetingHero } from '../components/MeetingHero';
 import { useBooking } from '../hooks/useBooking';
 import { useBookingApprovals } from '../hooks/useBookingApprovals';
 import { useGroupSessions } from '../hooks/useGroupSessions';
 import { useRoomSteps } from '../hooks/useRoomSteps';
 import { useSchedule } from '../hooks/useSchedule';
 import { draftFromBooking, inferRecurrence, useBookingDraft } from '../store/draftStore';
-import { AttachmentType, BookingStatus, type BookingAttachment, type ParticipantDto } from '../types';
-import { allExtendDeltas, bookingFrom, bookingPermissions, bookingPhase, bookingTo, buildApprovalSteps, EXTEND_STEPS, extendOptions, freeUntil, isInExtendWindow } from '../utils/booking';
-import { serviceIcon } from '../utils/serviceIcon';
+import { AttachmentType, BookingStatus, type BookingAttachment } from '../types';
+import { allExtendDeltas, bookingFrom, bookingPermissions, bookingTo, buildApprovalSteps, EXTEND_STEPS, extendOptions, freeUntil, isInExtendWindow } from '../utils/booking';
 
 type MoreAction = { label: string; destructive?: boolean; onPress: () => void };
 
@@ -76,6 +57,7 @@ export function BookingDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const booking = useBooking(id);
   const approvals = useBookingApprovals(id);
+  const pull = usePullRefresh(() => Promise.all([booking.refetch(), approvals.refetch()]));
   const me = useRoomMe();
   const b = booking.data;
   const steps = useRoomSteps(b?.roomId ?? b?.room?.id);
@@ -85,7 +67,7 @@ export function BookingDetailScreen() {
   const [approving, setApproving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
-  const [sheet, setSheet] = useState<'people' | 'documents' | 'services' | 'extend' | null>(null);
+  const [sheet, setSheet] = useState<'people' | 'extend' | null>(null);
   const [extendChoice, setExtendChoice] = useState<number | undefined>();
 
   const from = b ? bookingFrom(b) : null;
@@ -99,7 +81,6 @@ export function BookingDetailScreen() {
   );
 
   const status = b?.status ?? BookingStatus.Waiting;
-  const phase = b ? bookingPhase(b, now) : 'upcoming';
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: qk.bookings.root });
@@ -162,7 +143,7 @@ export function BookingDetailScreen() {
   const stepViews = buildApprovalSteps(rows, steps, status);
   const progress = levelProgress(stepViews);
   const rejectedRow = rows.find((r) => r.isApproved === false);
-  const participants = (b.participants ?? []).filter((p): p is ParticipantDto & { user: NonNullable<ParticipantDto['user']> } => !!p.user);
+  const participants = (b.participants ?? []).filter((p): p is MeetingParticipant => !!p.user);
   const showCountdown = status === BookingStatus.Approved && perms.isCreator && (perms.canExtend || perms.canEndEarly || isInExtendWindow(b, now));
   const options = perms.canExtend ? extendOptions(b, b.room, daySchedule.data ?? [], EXTEND_STEPS) : [];
   const allOptions = perms.canExtend ? extendOptions(b, b.room, daySchedule.data ?? [], allExtendDeltas(b, b.room)) : [];
@@ -254,56 +235,33 @@ export function BookingDetailScreen() {
   ) : undefined;
 
   const title = perms.canSeeContent ? b.content || b.code || '' : t('meeting.confidentialHidden');
-  const host = participants.find((p) => p.isHost);
   const sessionLabel = series && sessionIndex >= 0 ? t('meeting.sessionOf', { index: sessionIndex + 1, total: group.sessions.length }) : null;
   const approvedLevels = new Set(stepViews.filter((s) => s.state === 'approved').map((s) => s.order)).size;
   // The pending level started with the last decision (or with the request itself).
   const waitingSince = rows.filter((r) => r.processedAt).map((r) => r.processedAt!).sort().pop() ?? b.createdAt;
 
-  const summary = (
-    <FloatingCard radius={20} className="gap-2.5 p-4">
-      <View className="flex-row flex-wrap items-center gap-1.5">
-        <BookingBadge status={status} dot />
-        {status === BookingStatus.Approved && phase !== 'live' ? <Tag label={t(`status.bookingPhase.${phase}`)} /> : null}
-        {sessionLabel ? <Tag label={sessionLabel} /> : null}
-        {recurrence?.recurrence === 'weekly' ? <Tag label={t('meeting.recurrenceWeekly')} /> : recurrence?.recurrence === 'daily' ? <Tag label={t('meeting.recurrenceDaily')} /> : null}
-      </View>
-      <Text weight="bold" numberOfLines={3} accessibilityRole="header" className="text-ink" style={{ fontSize: 18, lineHeight: 24 }}>
-        {title}
-      </Text>
-      <View className="gap-1.5">
-        <SummaryRow icon={ClockIcon}>
-          <Text mono weight="bold" className="text-ink" style={{ fontSize: 13.5 }}>{`${formatTime(from)} - ${formatTime(to)}`}</Text>
-          {from ? ` · ${t(`time.weekday.${String(weekdayOf(toDateKey(from))) as '0'}`)}, ${formatDayMonth(from)}` : ''}
-        </SummaryRow>
-        <SummaryRow icon={DoorOpenIcon}>{[b.room?.name, b.room?.code2, t('meeting.people', { count: b.numberOfParticipants ?? 0 })].filter(Boolean).join(' · ')}</SummaryRow>
-        {b.user ? <SummaryRow icon={UserIcon}>{t('meeting.registeredBy', { name: b.user.fullname ?? b.user.username })}</SummaryRow> : null}
-      </View>
-    </FloatingCard>
-  );
-
-  const participantRows = participants.map((p) => (
-    <PersonRow
-      key={p.id}
-      person={roomPerson(p.user)}
-      trailing={p.isHost ? <Tag kind="wait" label={t('booking.host')} /> : p.isPrepareContent ? <Tag kind="warn" label={t('booking.prepare')} /> : undefined}
-    />
-  ));
-
+  const tags: string[] = [];
+  if (sessionLabel) tags.push(sessionLabel);
+  if (recurrence?.recurrence === 'weekly') tags.push(t('meeting.recurrenceWeekly'));
+  else if (recurrence?.recurrence === 'daily') tags.push(t('meeting.recurrenceDaily'));
   const documents = b.attachments ?? [];
 
   return (
     <ModuleScreen
-      header={
-        showCountdown
-          ? header(<LiveHeader booking={b} title={title} roomLine={[b.room?.name, b.room?.code2].filter(Boolean).join(' · ')} people={t('meeting.people', { count: b.numberOfParticipants ?? 0 })} />, moreButton, 24)
-          : header(null, moreButton, 18)
-      }
-      floating={showCountdown ? undefined : summary}
+      header={header(<MeetingHero booking={b} title={title} hidden={!perms.canSeeContent} tags={tags} />, moreButton, 18)}
+      floating={<PlaceCard booking={b} />}
       floatingScrolls
       footer={actions.length ? actions : undefined}
-      refreshControl={<RefreshControl refreshing={booking.isRefetching} onRefresh={() => void Promise.all([booking.refetch(), approvals.refetch()])} />}
+      refreshControl={<RefreshControl refreshing={pull.refreshing} onRefresh={() => void pull.onRefresh()} />}
     >
+      {perms.cancelBlockedByPolicy ? (
+        <Banner tone="off" testID="meeting-no-cancel">
+          {t('meeting.noCancelPolicy')}
+        </Banner>
+      ) : null}
+      {status === BookingStatus.Rejected && rejectedRow?.comment ? <Banner tone="danger">{t('meeting.rejectedReason', { reason: rejectedRow.comment })}</Banner> : null}
+      {status === BookingStatus.Canceled && b.reason ? <Banner tone="off">{t('meeting.cancelledReason', { reason: b.reason })}</Banner> : null}
+
       {showCountdown && perms.canExtend && to ? (
         <ExtendCard
           options={options}
@@ -315,14 +273,6 @@ export function BookingDetailScreen() {
           freeUntil={roomFreeUntil}
         />
       ) : null}
-
-      {perms.cancelBlockedByPolicy ? (
-        <Banner tone="off" testID="meeting-no-cancel">
-          {t('meeting.noCancelPolicy')}
-        </Banner>
-      ) : null}
-      {status === BookingStatus.Rejected && rejectedRow?.comment ? <Banner tone="danger">{t('meeting.rejectedReason', { reason: rejectedRow.comment })}</Banner> : null}
-      {status === BookingStatus.Canceled && b.reason ? <Banner tone="off">{t('meeting.cancelledReason', { reason: b.reason })}</Banner> : null}
 
       {!showCountdown ? (
         <Card className="gap-3.5 p-4">
@@ -345,82 +295,15 @@ export function BookingDetailScreen() {
         </Card>
       ) : null}
 
-      {showCountdown ? (
-        <>
-          {participants.length ? (
-            <PressableCard testID="meeting-participants" onPress={() => setSheet('people')} className="flex-row items-center gap-3 p-4">
-              <AvatarStack size={34} max={4} people={participants.map((p) => ({ name: p.user.fullname, uri: p.user.avatarUrl }))} />
-              <View className="min-w-0 flex-1">
-                <Text weight="bold" numberOfLines={1} style={{ fontSize: 14.5, lineHeight: 19 }}>
-                  {t('meeting.participantsLine', { count: participants.length })}
-                </Text>
-                {host ? (
-                  <Text numberOfLines={1} className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
-                    {t('meeting.hostLine', { name: host.user.fullname ?? '' })}
-                  </Text>
-                ) : null}
-              </View>
-              <Icon icon={ChevronRightIcon} size={16} color="subtle" />
-            </PressableCard>
-          ) : null}
-          {documents.length ? (
-            <Card className="gap-1 px-4 pb-2 pt-3.5">
-              <Text weight="bold" accessibilityRole="header" className="pb-1" style={{ fontSize: 15, lineHeight: 20 }}>
-                {`${t('meeting.documents')} · ${documents.length}`}
-              </Text>
-              {documents.map((a, i) => (
-                <DocumentLine key={a.id} attachment={a} divider={i > 0} onOpen={() => void openAttachment(a)} />
-              ))}
-            </Card>
-          ) : null}
-          {b.services?.length ? (
-            <Card>
-              <InfoRow icon={CoffeeIcon} label={t('meeting.services')} value={b.services.map((s) => s.name).join(', ')} />
-            </Card>
-          ) : null}
-        </>
-      ) : (
-        <Card>
-          <InfoRow
-            testID="meeting-participants"
-            icon={UsersIcon}
-            label={t('meeting.participants')}
-            value={participants.length ? t('meeting.participantsCount', { count: participants.length }) : t('meeting.none')}
-            onPress={participants.length ? () => setSheet('people') : undefined}
-          />
-          {b.participant ? <InfoRow divider icon={UsersIcon} label={t('meeting.otherParticipants')} value={b.participant} /> : null}
-          <InfoRow
-            divider
-            icon={BellIcon}
-            label={t('meeting.services')}
-            value={b.services?.length ? t('meeting.servicesCount', { count: b.services.length }) : t('meeting.none')}
-            onPress={b.services?.length ? () => setSheet('services') : undefined}
-          />
-          <InfoRow
-            divider
-            testID="meeting-documents"
-            icon={FileTextIcon}
-            label={t('meeting.documents')}
-            value={documents.length ? t('meeting.filesCount', { count: documents.length }) : t('meeting.none')}
-            onPress={documents.length ? () => setSheet('documents') : undefined}
-          />
-          {b.phoneNumber ? <InfoRow divider icon={PhoneIcon} label={t('meeting.phone')} value={b.phoneNumber} mono onPress={() => void Linking.openURL(`tel:${b.phoneNumber}`)} /> : null}
-        </Card>
-      )}
+      <ParticipantsCard participants={participants} note={perms.canSeeContent ? b.participant : null} onShowAll={() => setSheet('people')} />
+      {b.services?.length ? <ServicesCard services={b.services} /> : null}
+      {documents.length ? <DocumentsCard documents={documents} onOpen={(a) => void openAttachment(a)} /> : null}
 
       <ApproveSheet bookingId={approving ? b.id : null} onClose={() => setApproving(false)} onDone={refresh} />
 
       <BottomSheet visible={sheet === 'people'} onClose={() => setSheet(null)} title={`${t('meeting.participants')} · ${participants.length}`} scrollable>
-        {participantRows}
-      </BottomSheet>
-      <BottomSheet visible={sheet === 'services'} onClose={() => setSheet(null)} title={t('meeting.services')} scrollable>
-        {(b.services ?? []).map((service) => (
-          <InfoRow key={service.id} icon={serviceIcon(service.name)} label={service.name} />
-        ))}
-      </BottomSheet>
-      <BottomSheet visible={sheet === 'documents'} onClose={() => setSheet(null)} title={t('meeting.documents')} scrollable>
-        {documents.map((a, i) => (
-          <DocumentLine key={a.id} attachment={a} divider={i > 0} onOpen={() => void openAttachment(a)} />
+        {sortParticipants(participants).map((p) => (
+          <PersonRow key={p.id} person={roomPerson(p.user)} trailing={<RoleTags p={p} />} />
         ))}
       </BottomSheet>
       <SelectSheet
@@ -448,40 +331,5 @@ export function BookingDetailScreen() {
         <NoteField testID="meeting-cancel-reason" placeholder={t('meeting.cancelReasonPlaceholder')} value={reason} onChangeText={setReason} />
       </BottomSheet>
     </ModuleScreen>
-  );
-}
-
-function SummaryRow({ icon, children }: { icon: AppIcon; children: ReactNode }) {
-  return (
-    <View className="flex-row items-center gap-2">
-      <Icon icon={icon} size={15} color="muted" />
-      <Text numberOfLines={1} className="flex-shrink text-ink-2" style={{ fontSize: 13.5, lineHeight: 18 }}>
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-/** Document line (6c): file / link icon box, name, type · host, "Mở". */
-function DocumentLine({ attachment: a, divider, onOpen }: { attachment: BookingAttachment; divider?: boolean; onOpen: () => void }) {
-  const { t } = useTranslation();
-  const link = a.type === AttachmentType.Link;
-  const name = a.name ?? '';
-  const meta = link ? (a.path ?? name).replace(/^https?:\/\/(www\.)?/i, '').split('/')[0] : (name.split('.').pop() ?? '').toUpperCase();
-  return (
-    <View className={`min-h-[56px] flex-row items-center gap-3 py-2 ${divider ? 'border-t border-line-2' : ''}`}>
-      <View className={`h-10 w-10 items-center justify-center rounded-[11px] ${link ? 'bg-primary-tint' : 'bg-danger-tint'}`}>
-        <Icon icon={link ? LinkIcon : FileTextIcon} size={18} color={link ? 'primary' : 'danger'} />
-      </View>
-      <View className="min-w-0 flex-1">
-        <Text weight="bold" numberOfLines={1} style={{ fontSize: 14, lineHeight: 19 }}>
-          {link ? name.replace(/^https?:\/\/(www\.)?/i, '') : name}
-        </Text>
-        <Text numberOfLines={1} className="text-muted" style={{ fontSize: 11.5, lineHeight: 15 }}>
-          {meta}
-        </Text>
-      </View>
-      <Button size="xs" variant="soft" label={t('meeting.open')} onPress={onOpen} className="rounded-[10px] px-3.5" />
-    </View>
   );
 }
