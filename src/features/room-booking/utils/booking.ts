@@ -427,10 +427,6 @@ export type BookingPermissions = {
   cancelBlockedByPolicy: boolean;
   canExtend: boolean;
   canEndEarly: boolean;
-  /** My row at the current level is still open. */
-  pendingRow: BookingApprovalHandlerDto | null;
-  canUndo: boolean;
-  undoRow: BookingApprovalHandlerDto | null;
 };
 
 export function bookingPermissions(b: BookingDto, myId: string | undefined, rows: BookingApprovalHandlerDto[], now = new Date()): BookingPermissions {
@@ -443,14 +439,6 @@ export function bookingPermissions(b: BookingDto, myId: string | undefined, rows
   const open = status === BookingStatus.Waiting || status === BookingStatus.Approved;
   const policyBlocks = !!b.room?.isDisableSubscriberCancel && status === BookingStatus.Approved && !isApprover;
 
-  const pendingRow = status === BookingStatus.Waiting ? (mine.find((r) => r.isApproved === null || r.isApproved === undefined) ?? null) : null;
-
-  // UndoApprovalBookingCommandHandler + BOOKING_ALREADY_STARTED / higher-level checks.
-  const undoRow = mine.find((r) => r.isApproved === true) ?? null;
-  const myOrder = undoRow?.approvalHandler?.approvalStep?.order ?? 0;
-  const higherDecided = rows.some((r) => (r.approvalHandler?.approvalStep?.order ?? 0) > myOrder && r.isApproved !== null && r.isApproved !== undefined);
-  const canUndo = !!undoRow && open && phase === 'upcoming' && !higherDecided;
-
   return {
     isCreator,
     isApprover,
@@ -461,8 +449,5 @@ export function bookingPermissions(b: BookingDto, myId: string | undefined, rows
     cancelBlockedByPolicy: isCreator && open && policyBlocks && phase !== 'past',
     canExtend: isCreator && status === BookingStatus.Approved && isInExtendWindow(b, now),
     canEndEarly: isCreator && status === BookingStatus.Approved && phase === 'live',
-    pendingRow,
-    canUndo,
-    undoRow,
   };
 }

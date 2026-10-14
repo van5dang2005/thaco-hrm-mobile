@@ -9,7 +9,6 @@ import { qk } from '@/core/query/keys';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { useRoomMe } from '@/core/session/useMe';
 import { addDays, atMinutes, formatKey, parseDateKey, todayKey, toDateKey, weekdayOf, type DateKey } from '@/core/time/vn';
-import { groupByDay } from '@/features/approval/utils/approval';
 import { useNow } from '@/shared/hooks/useNow';
 import { FloatingCard } from '@/shared/ui/Card';
 import { CardSegmented } from '@/shared/ui/CardSegmented';
@@ -31,7 +30,7 @@ import { WeekStrip, weekStripRange } from '../components/WeekStrip';
 import { defaultDraft, useBookingDraft } from '../store/draftStore';
 import { BookingStatus, type BookingDto } from '../types';
 import { bookingFrom } from '../utils/booking';
-import { isUpcoming, weekKeys, weekStartOf } from '../utils/myMeetings';
+import { groupByDay, isUpcoming, weekKeys, weekStartOf } from '../utils/myMeetings';
 
 type Tab = 'upcoming' | 'waiting' | 'past';
 const WINDOW_PAGE_SIZE = 100;

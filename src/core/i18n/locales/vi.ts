@@ -240,7 +240,7 @@ const vi = {
   },
   tabs: {
     home: 'Trang chủ',
-    approvals: 'Duyệt',
+    parcels: 'Bưu phẩm',
     calendar: 'Lịch',
     profile: 'Cá nhân',
   },

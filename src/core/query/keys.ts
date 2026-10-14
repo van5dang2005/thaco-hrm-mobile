@@ -32,11 +32,6 @@ export const qk = {
     detail: (id: string) => ['bookings', 'detail', id] as const,
     approvals: (id: string) => ['bookings', 'approvals', id] as const,
   },
-  approvals: {
-    root: ['approvals'] as const,
-    inbox: (status: number, search?: string) => ['approvals', 'inbox', status, search ?? ''] as const,
-    stats: ['approvals', 'stats'] as const,
-  },
   parcels: {
     root: ['parcels'] as const,
     my: (params: Record<string, unknown>) => ['parcels', 'my', params] as const,

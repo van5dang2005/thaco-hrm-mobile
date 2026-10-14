@@ -6,7 +6,6 @@ import { useCapabilities } from '@/core/session/capabilities';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { sameId } from '@/core/session/userTypes';
 import { addDays, atMinutes, formatKey, minutesOfDay, todayKey, type DateKey } from '@/core/time/vn';
-import { useApprovalStats } from '@/features/approval/hooks/useApprovalStats';
 import { parcelsApi } from '@/features/parcel/api/parcel.api';
 import { useMyParcelStats } from '@/features/parcel/hooks/useMyParcelStats';
 import { useReceptionStats } from '@/features/parcel/hooks/useReceptionStats';
@@ -107,22 +106,6 @@ export function useFreeRoomsSummary(): Signal<string> {
   return { data: rooms.data.free ? t('home.summary.freeRooms', { count: rooms.data.free }) : t('home.summary.noFreeRooms'), isLoading: false };
 }
 
-// ── Approvals ───────────────────────────────────────────────────────────────
-
-export function usePendingApprovals(): Signal<number> {
-  const stats = useApprovalStats();
-  return { data: stats.data?.pendingApprovalsForUser, isLoading: stats.isLoading };
-}
-
-export function usePendingApprovalsSummary(): Signal<string> {
-  const { t } = useTranslation();
-  const pending = usePendingApprovals();
-  return {
-    data: pending.data === undefined ? undefined : pending.data ? t('home.summary.approvalsPending', { count: pending.data }) : t('home.summary.approvalsNone'),
-    isLoading: pending.isLoading,
-  };
-}
-
 // ── Parcels ─────────────────────────────────────────────────────────────────
 
 /** Parcels I still have to collect: waiting (incl. due) and overdue, as on the "Cần xử lý" tile. */
@@ -178,17 +161,16 @@ export function useReceptionSummary(): Signal<string> {
 
 // ── "Cần xử lý" ─────────────────────────────────────────────────────────────
 
-export type TodoKind = 'approvals' | 'parcels';
+export type TodoKind = 'parcels';
 
 /** The module behind each to-do tile; a tile shows only when its module is visible to the user. */
-export const todoModuleIds: Record<TodoKind, string> = { approvals: 'approve-rooms', parcels: 'parcels' };
+export const todoModuleIds: Record<TodoKind, string> = { parcels: 'parcels' };
 
 export type TodoItem = { kind: TodoKind; count?: number; sub?: string; isLoading: boolean };
 
 /** Counts and second lines of the to-do tiles (2c / 2g). Parcels count the ones waiting for me (incl. due) plus overdue. */
 export function useTodoItems(): Record<TodoKind, TodoItem> {
   const { t } = useTranslation();
-  const approvals = usePendingApprovals();
   const stats = useMyParcelStats();
   const due = useDueParcels();
 
@@ -205,7 +187,6 @@ export function useTodoItems(): Record<TodoKind, TodoItem> {
           : t('home.todo.parcelsNone');
 
   return {
-    approvals: { kind: 'approvals', count: approvals.data, sub: t('home.todo.approvalsSub'), isLoading: approvals.isLoading },
     parcels: { kind: 'parcels', count: parcelCount, sub: parcelSub, isLoading: stats.isLoading },
   };
 }

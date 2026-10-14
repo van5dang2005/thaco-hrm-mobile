@@ -59,3 +59,15 @@ export function isUpcoming(b: BookingDto, now = new Date()): boolean {
   const open = b.status === BookingStatus.Waiting || b.status === BookingStatus.Approved;
   return open && !!to && to > now;
 }
+
+/** Group already-sorted items by the day returned by `keyOf`, keeping first-seen order. */
+export function groupByDay<T>(items: T[], keyOf: (item: T) => DateKey): { key: DateKey; data: T[] }[] {
+  const groups: { key: DateKey; data: T[] }[] = [];
+  items.forEach((item) => {
+    const key = keyOf(item);
+    const group = groups.find((g) => g.key === key);
+    if (group) group.data.push(item);
+    else groups.push({ key, data: [item] });
+  });
+  return groups;
+}

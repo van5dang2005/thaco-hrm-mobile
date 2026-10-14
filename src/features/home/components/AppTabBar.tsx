@@ -9,25 +9,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ServiceId } from '@/core/api/ApiError';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { useTheme } from '@/core/theme/ThemeProvider';
-import { useApprovalStats } from '@/features/approval/hooks/useApprovalStats';
 import { CountBadge } from '@/shared/ui/CountBadge';
 import { Icon } from '@/shared/ui/Icon';
-import { type AppIcon, CalendarSyncIcon, UserRoundCogIcon, HouseHeartIcon, SignatureIcon } from '@/shared/ui/icons';
+import { type AppIcon, CalendarSyncIcon, UserRoundCogIcon, HouseHeartIcon, PackageIcon } from '@/shared/ui/icons';
 import { shadows } from '@/shared/ui/shadows';
 import { Text } from '@/shared/ui/Text';
 
-type TabName = 'index' | 'approvals' | 'calendar' | 'profile';
+import { useWaitingParcels } from '../hooks/useSignals';
+
+type TabName = 'index' | 'parcels' | 'calendar' | 'profile';
 
 const tabIcon: Record<TabName, AppIcon> = {
   index: HouseHeartIcon,
-  approvals: SignatureIcon,
+  parcels: PackageIcon,
   calendar: CalendarSyncIcon,
   profile: UserRoundCogIcon,
 };
 
 const tabLabel = {
   index: 'tabs.home',
-  approvals: 'tabs.approvals',
+  parcels: 'tabs.parcels',
   calendar: 'tabs.calendar',
   profile: 'tabs.profile',
 } as const;
@@ -35,14 +36,14 @@ const tabLabel = {
 /** Page color behind the bar, so it floats on the screen it belongs to: home #F2F4F8, the others #EDF1F6. */
 const pageColor: Record<TabName, 'home-bg' | 'canvas'> = {
   index: 'home-bg',
-  approvals: 'canvas',
+  parcels: 'canvas',
   calendar: 'canvas',
   profile: 'canvas',
 };
 
 /** Back-end a tab's screen lives on: hidden while the THACO apps portal does not grant it. */
 const tabService: Partial<Record<TabName, ServiceId>> = {
-  approvals: 'room',
+  parcels: 'parcel',
   calendar: 'room',
 };
 
@@ -58,7 +59,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
   const { t } = useTranslation();
   const { colors, scheme } = useTheme();
   const insets = useSafeAreaInsets();
-  const pending = useApprovalStats().data?.pendingApprovalsForUser ?? 0;
+  const pending = useWaitingParcels().data ?? 0;
   const connected = useSessionStore((s) => s.connected);
   const shown = (name: string) => {
     const service = tabService[name as TabName];
@@ -85,7 +86,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
           if (!shown(name)) return null;
           const focused = state.index === index;
           const label = t(tabLabel[name]);
-          const badge = name === 'approvals' ? pending : 0;
+          const badge = name === 'parcels' ? pending : 0;
           const color = focused ? colors['on-primary'] : colors['ink-2'];
 
           const onPress = () => {

@@ -11,7 +11,6 @@ import {
   ChartGanttIcon,
   InboxIcon,
   PackageIcon,
-  SquareCheckBigIcon,
 } from '@/shared/ui/icons';
 
 import {
@@ -19,8 +18,6 @@ import {
   useFreeRoomsSummary,
   useMeetingsTodaySummary,
   useParcelSummary,
-  usePendingApprovals,
-  usePendingApprovalsSummary,
   useReceptionSummary,
   useWaitingParcels,
 } from './hooks/useSignals';
@@ -107,18 +104,6 @@ export const nativeModules: readonly HomeModule[] = [
     route: '/calendar',
     permission: { service: 'room' },
     summary: useMeetingsTodaySummary,
-  },
-  {
-    id: 'approve-rooms',
-    group: 'meeting',
-    labelKey: 'approveRooms',
-    shortLabelKey: 'approveRoomsShort',
-    icon: SquareCheckBigIcon,
-    route: '/approvals',
-    permission: { service: 'room' },
-    badge: usePendingApprovals,
-    summary: usePendingApprovalsSummary,
-    urgentWhenBadged: true,
   },
   {
     id: 'room-calendar',

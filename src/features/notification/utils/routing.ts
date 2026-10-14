@@ -3,14 +3,10 @@ import type { Href } from 'expo-router';
 import type { ServiceId } from '@/core/api/ApiError';
 import { qk } from '@/core/query/keys';
 
-/** Notification template codes (CLAUDE.md §2.8, §3.7). */
-const ROOM_APPROVER_CODES = new Set(['NEW_BOOKING', 'BOOKING_APPROVED', 'BOOKING_REJECTED', 'UNDO_APPROVAL']);
-
 /** Where tapping a notification should go. */
-export function hrefForNotification(service: ServiceId, code?: string | null, bookingId?: string | null): Href {
+export function hrefForNotification(service: ServiceId, bookingId?: string | null): Href {
   if (service === 'room') {
     if (bookingId) return { pathname: '/rooms/bookings/[id]', params: { id: bookingId } };
-    if (code && ROOM_APPROVER_CODES.has(code)) return '/approvals';
     return '/calendar';
   }
   return '/parcels';
@@ -19,7 +15,7 @@ export function hrefForNotification(service: ServiceId, code?: string | null, bo
 /** Query groups to refresh when a notification arrives (the change it announces happened server-side). */
 export function keysForNotification(service: ServiceId): readonly (readonly unknown[])[] {
   return service === 'room'
-    ? [qk.approvals.root, qk.bookings.root]
+    ? [qk.bookings.root]
     : [qk.parcels.root];
 }
 
@@ -44,7 +40,7 @@ export function keysForResource(service: ServiceId, resourceType?: number | null
   }
   switch (resourceType) {
     case 9: // Booking
-      return [qk.bookings.root, qk.approvals.root];
+      return [qk.bookings.root];
     case 1: // Room
     case 2: // Service
     case 3: // Area
@@ -55,6 +51,6 @@ export function keysForResource(service: ServiceId, resourceType?: number | null
     case 14: // Notification
       return [qk.notifications.root];
     default:
-      return [qk.bookings.root, qk.approvals.root, qk.rooms.root];
+      return [qk.bookings.root, qk.rooms.root];
   }
 }

@@ -88,7 +88,7 @@ export function NotificationsScreen() {
 
   const openItem = (item: NotificationDto) => {
     if (!item.isRead) markRead.mutate(item.id);
-    router.push(hrefForNotification(service, item.code));
+    router.push(hrefForNotification(service));
   };
 
   const renderItem = ({ item }: { item: NotificationDto }) => (

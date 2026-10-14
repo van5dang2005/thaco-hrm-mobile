@@ -76,6 +76,8 @@ export function MyParcelsScreen() {
       testID="parcels-header"
       icon={PackageIcon}
       title={t('parcels.title')}
+      titleSize="lg"
+      leading="none"
       right={
         canCreate ? (
           <HeaderActionButton

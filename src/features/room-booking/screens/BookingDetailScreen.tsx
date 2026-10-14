@@ -11,8 +11,6 @@ import { useRoomMe } from '@/core/session/useMe';
 import { roomPerson, sameId } from '@/core/session/userTypes';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { addDays, atMinutes, formatMinutes, minutesOfDay, toDateKey } from '@/core/time/vn';
-import { approvalsApi } from '@/features/approval/api/approval.api';
-import { ApproveSheet } from '@/features/approval/components/ApproveSheet';
 import { useNow } from '@/shared/hooks/useNow';
 import { downloadAndShare } from '@/shared/lib/download';
 import { Banner } from '@/shared/ui/Banner';
@@ -20,7 +18,7 @@ import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Card } from '@/shared/ui/Card';
 import { HeaderIconButton } from '@/shared/ui/HeaderBar';
-import { CheckIcon, EllipsisIcon, PresentationIcon, SquareIcon, XIcon } from '@/shared/ui/icons';
+import { EllipsisIcon, PresentationIcon, SquareIcon, XIcon } from '@/shared/ui/icons';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { ModuleScreen } from '@/shared/ui/ModuleScreen';
 import { NoteField } from '@/shared/ui/NoteField';
@@ -64,7 +62,6 @@ export function BookingDetailScreen() {
   const group = useGroupSessions(b);
   const now = useNow(30_000);
   const startDraft = useBookingDraft((s) => s.start);
-  const [approving, setApproving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [reason, setReason] = useState('');
   const [sheet, setSheet] = useState<'people' | 'extend' | null>(null);
@@ -84,7 +81,6 @@ export function BookingDetailScreen() {
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: qk.bookings.root });
-    void queryClient.invalidateQueries({ queryKey: qk.approvals.root });
   };
   const onError = (e: unknown) => toast.error(errorMessage(e, t));
 
@@ -110,14 +106,6 @@ export function BookingDetailScreen() {
     mutationFn: () => bookingsApi.complete(id, new Date().toISOString()),
     onSuccess: () => {
       toast.success(t('meeting.ended'));
-      refresh();
-    },
-    onError,
-  });
-  const undo = useMutation({
-    mutationFn: (isUpdateSingleDay: boolean) => approvalsApi.undo(id, isUpdateSingleDay),
-    onSuccess: () => {
-      toast.success(t('approvals.undone'));
       refresh();
     },
     onError,
@@ -165,14 +153,6 @@ export function BookingDetailScreen() {
       router.push('/rooms/book');
     });
 
-  const onUndo = () =>
-    series
-      ? confirmScope(t('approvals.undo'), t('approvals.undoConfirm'), (single) => undo.mutate(single))
-      : Alert.alert(t('approvals.undo'), t('approvals.undoConfirm'), [
-          { text: t('common.cancel'), style: 'cancel' },
-          { text: t('approvals.undo'), onPress: () => undo.mutate(true) },
-        ]);
-
   const onEndNow = () =>
     Alert.alert(t('meeting.endNow'), t('meeting.endNowConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
@@ -191,11 +171,7 @@ export function BookingDetailScreen() {
   // Footer per the action matrix; anything that does not fit goes to the "…" menu.
   const actions: ReactNode[] = [];
   const more: MoreAction[] = [];
-  if (perms.pendingRow) {
-    // Approve is the main decision: wider and filled; reject stays a quieter tinted button beside it.
-    actions.push(<Button key="reject" testID="meeting-reject" className="flex-1" variant="danger-soft" icon={XIcon} label={t('approvals.reject')} onPress={() => setApproving(true)} />);
-    actions.push(<Button key="approve" testID="meeting-approve" className="flex-[1.6]" variant="success" icon={CheckIcon} label={t('approvals.approve')} onPress={() => setApproving(true)} />);
-  } else if (showCountdown && (perms.canEndEarly || (perms.canExtend && extendTo !== undefined))) {
+  if (showCountdown && (perms.canEndEarly || (perms.canExtend && extendTo !== undefined))) {
     if (perms.canEndEarly) actions.push(<Button key="end" testID="meeting-end-now" className="flex-1" variant="ghost" icon={SquareIcon} label={t('meeting.endEarly')} loading={complete.isPending} onPress={onEndNow} />);
     if (perms.canExtend && extendTo !== undefined) {
       actions.push(
@@ -213,11 +189,6 @@ export function BookingDetailScreen() {
   } else {
     if (perms.canCancel) actions.push(<Button key="cancel" testID="meeting-cancel" className="flex-1" variant="danger-outline" label={t('meeting.cancel')} onPress={() => setCancelling(true)} />);
     if (perms.canEdit) actions.push(<Button key="edit" testID="meeting-edit" className="flex-[1.4]" label={t('meeting.edit')} onPress={onEdit} />);
-    if (perms.canUndo && actions.length < 2) {
-      actions.push(<Button key="undo" testID="meeting-undo" className="flex-1" variant="ghost" label={t('approvals.undo')} loading={undo.isPending} onPress={onUndo} />);
-    } else if (perms.canUndo) {
-      more.push({ label: t('approvals.undo'), onPress: onUndo });
-    }
   }
 
   const moreButton = more.length ? (
@@ -298,8 +269,6 @@ export function BookingDetailScreen() {
       <ParticipantsCard participants={participants} note={perms.canSeeContent ? b.participant : null} onShowAll={() => setSheet('people')} />
       {b.services?.length ? <ServicesCard services={b.services} /> : null}
       {documents.length ? <DocumentsCard documents={documents} onOpen={(a) => void openAttachment(a)} /> : null}
-
-      <ApproveSheet bookingId={approving ? b.id : null} onClose={() => setApproving(false)} onDone={refresh} />
 
       <BottomSheet visible={sheet === 'people'} onClose={() => setSheet(null)} title={`${t('meeting.participants')} · ${participants.length}`} scrollable>
         {sortParticipants(participants).map((p) => (

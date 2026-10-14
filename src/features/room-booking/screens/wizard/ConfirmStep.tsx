@@ -67,7 +67,6 @@ export function ConfirmStep() {
     },
     onSuccess: (created) => {
       void queryClient.invalidateQueries({ queryKey: qk.bookings.root });
-      void queryClient.invalidateQueries({ queryKey: qk.approvals.root });
       const first = created?.[0];
       reset();
       if (editing) {

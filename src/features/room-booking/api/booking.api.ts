@@ -2,7 +2,7 @@ import { roomApi } from '@/core/api/clients';
 import type { Paginated } from '@/core/api/types';
 import { appendLocalFile, type LocalFile } from '@/shared/lib/upload';
 
-import type { BookingDto, RecurrenceType } from '../types';
+import type { BookingApprovalHandlerDto, BookingDto, RecurrenceType } from '../types';
 
 export type ScheduleQuery = {
   fromDate: string;
@@ -70,6 +70,8 @@ function toBookingForm(input: BookingFormInput) {
 }
 
 export const bookingsApi = {
+  /** Every approver row created so far for a booking (approval-type steps only): the approval history. */
+  approvals: (bookingId: string) => roomApi.get<BookingApprovalHandlerDto[]>(`/api/bookingapprovals/booking/${bookingId}`),
   /** Not paginated; defaults server-side to today → +1 day. */
   schedule: (q: ScheduleQuery) => roomApi.get<BookingDto[]>('/api/bookings/get-all-bookings', { query: q }),
   mine: (q: { pageNumber: number; pageSize: number; fromDate?: string; toDate?: string; status?: number; search?: string }) =>

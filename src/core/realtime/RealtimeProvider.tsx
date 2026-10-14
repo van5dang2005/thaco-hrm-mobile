@@ -33,7 +33,7 @@ export function RealtimeProvider() {
         const popups = kv.getBoolean(kvKeys.notificationPopups) !== false;
         if (popups && (payload.title || payload.content)) {
           toast.notification(payload.title ?? '', payload.content ?? undefined, () =>
-            router.push(hrefForNotification(service, payload.code, payload.bookingId)),
+            router.push(hrefForNotification(service, payload.bookingId)),
           );
         }
       },

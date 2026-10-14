@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 import type { ColorToken } from '@/core/theme/palette';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { Icon } from '@/shared/ui/Icon';
-import { type AppIcon, ArrowUpRightIcon, PackageIcon, SquareCheckBigIcon } from '@/shared/ui/icons';
+import { type AppIcon, ArrowUpRightIcon, PackageIcon } from '@/shared/ui/icons';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { Text } from '@/shared/ui/Text';
 
@@ -14,11 +14,10 @@ import { SectionHeader } from './layouts/shared';
 
 /** Per tile: tinted background, glyph color, deep text color (2c). */
 export const todoTones: Record<TodoKind, { icon: AppIcon; tint: ColorToken; solid: ColorToken; deep: ColorToken }> = {
-  approvals: { icon: SquareCheckBigIcon, tint: 'primary-tint', solid: 'primary', deep: 'primary-dark' },
   parcels: { icon: PackageIcon, tint: 'warning-tint', solid: 'warning', deep: 'warning-deep' },
 };
 
-const kinds: TodoKind[] = ['approvals', 'parcels'];
+const kinds: TodoKind[] = ['parcels'];
 
 /** The to-do kinds whose module the user can see, with the module to open. */
 export function useVisibleTodos(modules: HomeModule[]) {

@@ -20,15 +20,6 @@ export enum ApprovalActionType {
   Notify = 2,
 }
 
-/** `status` query of GET /api/bookingapprovals/my-approvals. */
-export enum ApprovalFilter {
-  All = 0,
-  Approved = 1,
-  Rejected = 2,
-  Pending = 3,
-  Processed = 4,
-}
-
 export enum AttachmentType {
   File = 1,
   Link = 2,
@@ -148,11 +139,3 @@ export type BookingApprovalHandlerDto = {
   status?: 'Pending' | 'Approved' | 'Rejected' | null;
 };
 
-export type ApprovalStats = {
-  pendingApprovalsForUser: number;
-  pendingBookingsOfUser: number;
-  completedApprovalsOfUser: number;
-  totalBookingsOfUser: number;
-  totalAll: number;
-  bookingsToday: number;
-};

@@ -240,7 +240,7 @@ const en: Translation = {
   },
   tabs: {
     home: 'Home',
-    approvals: 'Approvals',
+    parcels: 'Parcels',
     calendar: 'Calendar',
     profile: 'Profile',
   },
