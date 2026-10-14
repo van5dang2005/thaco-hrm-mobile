@@ -13,6 +13,7 @@ import { groupByDay } from '@/features/approval/utils/approval';
 import { useNow } from '@/shared/hooks/useNow';
 import { FloatingCard } from '@/shared/ui/Card';
 import { CardSegmented } from '@/shared/ui/CardSegmented';
+import { DatePickerSheet } from '@/shared/ui/DatePickerSheet';
 import { HeaderIconButton } from '@/shared/ui/HeaderBar';
 import { HeaderSearch } from '@/shared/ui/HeaderSearch';
 import { CalendarDaysIcon, PlusIcon, SearchIcon, CalendarCheckIcon } from '@/shared/ui/icons';
@@ -26,7 +27,7 @@ import { toast } from '@/shared/ui/Toast';
 import { bookingsApi } from '../api/booking.api';
 import { ExtendSheet } from '../components/ExtendSheet';
 import { MyMeetingItem } from '../components/MyMeetingItem';
-import { WeekStrip } from '../components/WeekStrip';
+import { WeekStrip, weekStripRange } from '../components/WeekStrip';
 import { defaultDraft, useBookingDraft } from '../store/draftStore';
 import { BookingStatus, type BookingDto } from '../types';
 import { bookingFrom } from '../utils/booking';
@@ -49,6 +50,7 @@ export function MyMeetingsScreen() {
   const [selectedDay, setSelectedDay] = useState<DateKey>(today);
   const [weekStart, setWeekStart] = useState<DateKey>(() => weekStartOf(todayKey()));
   const [extending, setExtending] = useState<BookingDto | null>(null);
+  const [pickingDate, setPickingDate] = useState(false);
   const listRef = useRef<SectionList<BookingDto>>(null);
 
   // One read covers the previous, current and next week so dots stay filled while swiping.
@@ -60,8 +62,17 @@ export function MyMeetingsScreen() {
       bookingsApi.mine({ pageNumber: 1, pageSize: WINDOW_PAGE_SIZE, fromDate: atMinutes(windowFrom, 0).toISOString(), toDate: atMinutes(windowTo, 0).toISOString() }),
     enabled: connected,
     select: (page) => page.items,
+    // A week shown again (swipe back, date picked) is always asked again.
+    staleTime: 0,
   });
   const all = query.data ?? [];
+  const [refreshing, setRefreshing] = useState(false);
+  // Only a pull shows the spinner; the refetch on each day change stays silent.
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await query.refetch();
+    setRefreshing(false);
+  };
 
   const days = new Set(weekKeys(weekStart));
   const keyword = search?.trim().toLowerCase() ?? '';
@@ -100,6 +111,8 @@ export function MyMeetingsScreen() {
 
   const selectDay = (key: DateKey) => {
     setSelectedDay(key);
+    // Every day change asks the server again (refetch ignores `enabled`, hence the check).
+    if (connected) void query.refetch();
     const index = sections.findIndex((s) => s.key === key);
     if (index >= 0) listRef.current?.scrollToLocation({ sectionIndex: index, itemIndex: 0, viewOffset: 40, animated: true });
   };
@@ -109,6 +122,17 @@ export function MyMeetingsScreen() {
     // Keep the same weekday selected in the new week (today when it is inside).
     const offset = weekKeys(weekStart).indexOf(selectedDay);
     setSelectedDay(weekKeys(start).includes(today) ? today : weekKeys(start)[Math.max(0, offset)]);
+  };
+
+  /** A day from the month calendar: in this week it acts like a tap on the strip, otherwise the strip jumps to its week. */
+  const pickDate = (key: DateKey) => {
+    const start = weekStartOf(key);
+    if (start === weekStart) {
+      selectDay(key);
+      return;
+    }
+    setWeekStart(start);
+    setSelectedDay(key);
   };
 
   const { month, year } = parseDateKey(selectedDay);
@@ -122,6 +146,7 @@ export function MyMeetingsScreen() {
       leading="none"
       right={
         <>
+          <HeaderIconButton testID="my-meetings-date" icon={CalendarDaysIcon} label={t('rooms.chooseDate')} onPress={() => setPickingDate(true)} />
           <HeaderIconButton testID="my-meetings-search" icon={SearchIcon} label={t('common.search')} onPress={() => setSearch((v) => (v === null ? '' : null))} />
           <HeaderIconButton testID="my-meetings-book" variant="solid" icon={PlusIcon} label={t('myMeetings.book')} onPress={book} />
         </>
@@ -162,7 +187,7 @@ export function MyMeetingsScreen() {
           keyExtractor={(item) => item.id}
           stickySectionHeadersEnabled={false}
           contentContainerStyle={{ paddingHorizontal: CONTENT_PADDING.horizontal, paddingBottom: CONTENT_PADDING.bottom }}
-          refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} />}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
           onScrollToIndexFailed={() => undefined}
           ItemSeparatorComponent={() => <View className="h-3" />}
           renderSectionHeader={({ section }) => <DayHeader dayKey={section.key as DateKey} today={today} count={section.data.length} />}
@@ -194,6 +219,15 @@ export function MyMeetingsScreen() {
         />
       )}
       <ExtendSheet booking={extending} onClose={() => setExtending(null)} />
+      <DatePickerSheet
+        testID="my-meetings-date-sheet"
+        visible={pickingDate}
+        onClose={() => setPickingDate(false)}
+        title={t('rooms.chooseDate')}
+        value={selectedDay}
+        onSelect={pickDate}
+        {...weekStripRange(today)}
+      />
     </ModuleScreen>
   );
 }

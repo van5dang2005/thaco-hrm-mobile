@@ -13,6 +13,12 @@ import { onBlue } from '@/shared/ui/ScreenShell';
 const WEEKS_BEFORE = 12;
 const WEEKS_TOTAL = 52;
 
+/** First and last day the strip can scroll to, to bound a date picker next to it. */
+export function weekStripRange(today: DateKey) {
+  const base = weekStartOf(today);
+  return { minDate: addDays(base, -WEEKS_BEFORE * 7), maxDate: addDays(base, (WEEKS_TOTAL - WEEKS_BEFORE) * 7 - 1) };
+}
+
 type Props = {
   /** Monday of the week on screen. */
   weekStart: DateKey;
