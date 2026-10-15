@@ -40,6 +40,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
    */
   runtimeVersion: { policy: 'appVersion' },
   updates: { url: `https://u.expo.dev/${easProjectId}` },
+  /**
+   * Mobile only. `eas update` exports with `--platform=all`, which also renders web statically on the server,
+   * where module-level MMKV reads (i18n, auth) crash and fail the update.
+   */
+  platforms: ['ios', 'android'],
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'thacoone',
