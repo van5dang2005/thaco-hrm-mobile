@@ -22,6 +22,8 @@ export const env = {
     scope: process.env.EXPO_PUBLIC_SSO_SCOPES || 'openid profile email offline_access',
   },
   appVersion: process.env.EXPO_PUBLIC_APP_VERSION ?? '0.0.0',
+  /** OTA patch number on top of appVersion; bump it on expo.dev before each `eas update`. Empty or 0 = no patch. */
+  patchVersion: (process.env.EXPO_PUBLIC_PATCH_VERSION?.trim() ?? '').replace(/^0$/, ''),
   requestTimeoutMs: 20_000,
 };
 

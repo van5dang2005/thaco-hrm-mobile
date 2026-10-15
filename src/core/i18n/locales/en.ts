@@ -370,6 +370,14 @@ const en: Translation = {
       cards: { name: 'Cards', description: 'With live counts' },
     },
   },
+  appUpdate: {
+    title: 'A new update is available',
+    subtitle: 'THACO ONE',
+    body: 'Update to get the latest fixes and improvements. The app restarts in a few seconds and keeps your data. If you choose later, the update applies the next time you open the app.',
+    install: 'Update now',
+    later: 'Later',
+    failed: 'Could not download the update. Please try again later.',
+  },
   profile: {
     title: 'Profile',
     employeeCode: 'Employee ID',

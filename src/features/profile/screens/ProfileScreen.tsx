@@ -48,7 +48,8 @@ import { Toggle } from '@/shared/ui/Toggle';
 
 /** Rows start their text after padding 14 + icon box 36 + gap 12. */
 const ROW_INSET = 62;
-const version = Constants.expoConfig?.version ?? '0.0.0';
+/** Store version, plus the OTA patch when one is published: "1.0.0 (patch 3)". */
+const version = [Constants.expoConfig?.version ?? '0.0.0', env.patchVersion && `(patch ${env.patchVersion})`].filter(Boolean).join(' ');
 const languageNames: Record<Language, string> = { vi: 'Tiếng Việt', en: 'English' };
 
 /** 36pt icon box, radius 12, #EEF3F9 with a #00539B glyph (7a rows). */

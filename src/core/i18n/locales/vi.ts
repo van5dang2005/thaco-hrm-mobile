@@ -370,6 +370,14 @@ const vi = {
       cards: { name: 'Thẻ', description: 'Kèm số liệu' },
     },
   },
+  appUpdate: {
+    title: 'Đã có bản cập nhật mới',
+    subtitle: 'THACO ONE',
+    body: 'Cập nhật để dùng các sửa lỗi và cải tiến mới nhất. Ứng dụng sẽ khởi động lại trong vài giây, dữ liệu đang có được giữ nguyên. Nếu để sau, bản mới sẽ tự áp dụng ở lần mở ứng dụng tới.',
+    install: 'Cập nhật ngay',
+    later: 'Để sau',
+    failed: 'Không tải được bản cập nhật. Vui lòng thử lại sau.',
+  },
   profile: {
     title: 'Cá nhân',
     employeeCode: 'MSNV',

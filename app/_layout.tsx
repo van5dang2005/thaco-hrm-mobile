@@ -17,6 +17,7 @@ import { restoreSession } from '@/core/session/session';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { monoAssets, uiAssets } from '@/core/theme/fonts';
 import { ThemeProvider, useTheme } from '@/core/theme/ThemeProvider';
+import { UpdatePrompt } from '@/features/app-update/components/UpdatePrompt';
 import { ToastHost } from '@/shared/ui/Toast';
 
 void SplashScreen.preventAutoHideAsync();
@@ -56,6 +57,7 @@ function RootNavigator() {
         </Stack.Protected>
       </Stack>
       <ToastHost />
+      <UpdatePrompt />
     </NavigationThemeProvider>
   );
 }

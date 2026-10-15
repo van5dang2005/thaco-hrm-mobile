@@ -36,6 +36,7 @@
     "expo-status-bar": "~55.0.6",
     "expo-symbols": "~55.0.9",
     "expo-system-ui": "~55.0.22",
+    "expo-updates": "~55.0.33",
     "expo-web-browser": "~55.0.20",
     "i18next": "^26.4.2",
     "lucide-react-native": "^1.52.0",
@@ -88,11 +89,13 @@
     "e2e": "maestro test .maestro",
     "doctor": "npx expo-doctor",
     "native:clean": "expo prebuild --clean",
-    "build:apk:dev": "eas build --local --platform android --profile development --output build/thaco-one-dev.apk",
-    "build:apk": "eas build --local --platform android --profile preview --output build/thaco-one-preview.apk",
-    "build:apk:prod": "eas build --local --platform android --profile production-apk --output build/thaco-one.apk",
-    "build:aab": "eas build --local --platform android --profile production --output build/thaco-one.aab",
-    "build:apk:cloud": "eas build --platform android --profile preview"
+    "update:production": "APP_ENV=production eas update --channel production --environment production",
+    "build:preview": "eas build --platform all --profile preview",
+    "build:production": "eas build --platform all --profile production",
+    "build:android:preview": "eas build --platform android --profile preview",
+    "build:android:prod": "eas build --platform android --profile production",
+    "build:ios:preview": "eas build --platform ios --profile preview",
+    "build:ios:prod": "eas build --platform ios --profile production"
   },
   "private": true,
   "jest": {

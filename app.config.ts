@@ -20,16 +20,26 @@ if (!/^\d+(\.\d+){0,2}$/.test(version)) throw new Error(`EXPO_PUBLIC_APP_VERSION
 /** Non-production builds are labelled on the home screen so testers can tell them apart. */
 const nameSuffix: Record<AppEnv, string> = { development: '(Dev) ', preview: '(Beta) ', production: '' };
 
-const cameraPermission = 'THACO ONE dùng camera để chụp ảnh bưu phẩm khi tiếp nhận.';
+/** expo.dev project `@nguyenvandang/thaco-one-mobile`; also the EAS Update endpoint. */
+const easProjectId = 'a20357f7-e209-4655-bb90-a2456a02f774';
+
+const cameraPermission ='THACO ONE dùng camera để chụp ảnh bưu phẩm khi tiếp nhận.';
 const photosPermission = 'THACO ONE cần truy cập thư viện ảnh để đính kèm ảnh bưu phẩm.';
 const faceIdPermission = 'THACO ONE dùng Face ID để đăng nhập nhanh.';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: `${nameSuffix[appEnv]}THACO ONE`,
-  slug: 'thaco-hrm-mobile',
+  slug: 'thaco-one-mobile',
   owner: 'nguyenvandang',
   version,
+  /**
+   * OTA updates (EAS Update). A build only takes updates published with the same runtime version, here the
+   * app version: bump EXPO_PUBLIC_APP_VERSION whenever native code or native config changes, or the old
+   * build would download JS it cannot run. Each build profile listens on its own channel (`eas.json`).
+   */
+  runtimeVersion: { policy: 'appVersion' },
+  updates: { url: `https://u.expo.dev/${easProjectId}` },
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'thacoone',
@@ -67,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         backgroundColor: '#00539B',
         image: './assets/images/splash-icon.png',
-        imageWidth: 180,
+        imageWidth: 220,
         dark: { backgroundColor: '#0B1420', image: './assets/images/splash-icon.png' },
       },
     ],
@@ -84,6 +94,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   extra: {
     appEnv,
     router: {},
-    eas: { projectId: '044157d9-6fbf-4d99-aa5b-c2318a1cb638' },
+    eas: { projectId: easProjectId },
   },
 });

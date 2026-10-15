@@ -43,20 +43,34 @@ Build EAS (local lẫn cloud) tự lấy biến của môi trường ứng với
 | `npm start` · `start:clear` · `start:prod` | Metro · xoá cache · chế độ production (tắt dev, minify) |
 | `npm run android` · `ios` | Build + cài development build |
 | `npm run android:release` · `ios:release` | Build release lên emulator / simulator, dùng `.env` hiện tại |
-| `npm run build:apk` | APK preview, build local → `build/thaco-one-preview.apk` |
-| `npm run build:apk:dev` | APK development client, build local → `build/thaco-one-dev.apk` |
-| `npm run build:aab` | AAB production, build local → `build/thaco-one.aab` |
-| `npm run build:apk:cloud` | APK preview build trên cloud EAS |
+| `npm run build:preview` · `build:production` | Build trên cloud EAS cho cả iOS và Android theo profile |
+| `npm run build:android:preview` · `build:android:prod` | Build Android trên cloud EAS (preview ra APK, production ra AAB) |
+| `npm run build:ios:preview` · `build:ios:prod` | Build iOS trên cloud EAS (preview: ad hoc, cài trên máy đã đăng ký; prod: App Store) |
+| `npm run update:production` | Phát hành bản cập nhật OTA (JS + ảnh) cho các bản build production, xem mục "Cập nhật OTA" |
 | `npm run check` | typecheck + lint + test |
 | `npm run doctor` · `native:clean` | `expo-doctor` · prebuild lại `ios/` `android/` từ đầu |
 
-Build local cần Java 17, Android SDK (`ANDROID_HOME`) và `eas login`. Lần build đầu EAS hỏi tạo keystore Android: chọn Yes, keystore được lưu trên EAS và dùng lại cho các lần sau.
+Build cần `eas login`. Lần build đầu EAS hỏi tạo keystore Android và chứng chỉ iOS: chọn Yes, chúng được lưu trên EAS và dùng lại cho các lần sau. Upload lên App Store Connect: `eas submit -p ios --latest`.
 
 Android emulator cần chuyển cổng để `localhost` trỏ về máy dev:
 
 ```bash
 adb reverse tcp:8081 tcp:8081 && adb reverse tcp:5211 tcp:5211 && adb reverse tcp:5113 tcp:5113
 ```
+
+### Cập nhật OTA (EAS Update)
+
+Sửa JS, giao diện, chữ, ảnh thì không cần build lại: phát hành bản cập nhật, app kiểm tra khi mở (và khi quay lại app, tối đa 10 phút một lần) rồi hiện popup **"Đã có bản cập nhật mới"** (`src/features/app-update`). Người dùng bấm **Cập nhật ngay** thì app tải bản mới và khởi động lại sau vài giây; bấm **Để sau** thì bản mới tự áp dụng ở lần mở app tới. Popup không hiện trong môi trường development.
+
+```bash
+npm run update:production -- --message "Sửa lỗi hiển thị bưu phẩm"
+```
+
+- Mỗi profile build nghe một channel riêng (`channel` trong `eas.json`): `update:production` chỉ tới các bản production (kể cả bản đã lên App Store). Bản preview nhận update qua `APP_ENV=preview eas update --channel preview --environment preview`.
+- Bản build chỉ nhận update có cùng **runtime version**, ở đây chính là `EXPO_PUBLIC_APP_VERSION`. Khi thêm thư viện native, đổi quyền, icon, splash, bundle id hoặc bất kỳ gì trong `app.config.ts` ngoài JS: **tăng `EXPO_PUBLIC_APP_VERSION` rồi build lại**, không dùng OTA. Nếu quên tăng, bản build cũ sẽ tải JS cần native mới và bị crash.
+- Bản update đọc biến môi trường của EAS (`--environment`), không đọc `.env` local.
+- Đánh số bản vá: trước mỗi lần `update:production`, tăng `EXPO_PUBLIC_PATCH_VERSION` của môi trường production trên expo.dev (`eas env:update`). Màn hình Hồ sơ hiện "v1.0.0 (patch 3)". Khi build bản mới (tăng `EXPO_PUBLIC_APP_VERSION`), đặt lại về trống hoặc `0`.
+- Lỗi sau khi phát hành: `eas update:rollback` (hoặc publish lại commit trước).
 
 ### iOS
 

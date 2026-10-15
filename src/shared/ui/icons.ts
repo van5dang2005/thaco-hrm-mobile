@@ -46,6 +46,7 @@ export { default as CitrusIcon } from 'lucide-react-native/icons/citrus';
 export { default as ClipboardListIcon } from 'lucide-react-native/icons/clipboard-list';
 export { default as ClockAlertIcon } from 'lucide-react-native/icons/clock-alert';
 export { default as ClockIcon } from 'lucide-react-native/icons/clock';
+export { default as CloudDownloadIcon } from 'lucide-react-native/icons/cloud-download';
 export { default as CoffeeIcon } from 'lucide-react-native/icons/coffee';
 export { default as ContrastIcon } from 'lucide-react-native/icons/contrast';
 export { default as DoorClosedIcon } from 'lucide-react-native/icons/door-closed';
