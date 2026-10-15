@@ -20,22 +20,22 @@ if (!/^\d+(\.\d+){0,2}$/.test(version)) throw new Error(`EXPO_PUBLIC_APP_VERSION
 /** Non-production builds are labelled on the home screen so testers can tell them apart. */
 const nameSuffix: Record<AppEnv, string> = { development: '(Dev) ', preview: '(Beta) ', production: '' };
 
-const cameraPermission = 'THACO HRM dùng camera để chụp ảnh bưu phẩm khi tiếp nhận.';
-const photosPermission = 'THACO HRM cần truy cập thư viện ảnh để đính kèm ảnh bưu phẩm.';
-const faceIdPermission = 'THACO HRM dùng Face ID để đăng nhập nhanh.';
+const cameraPermission = 'THACO ONE dùng camera để chụp ảnh bưu phẩm khi tiếp nhận.';
+const photosPermission = 'THACO ONE cần truy cập thư viện ảnh để đính kèm ảnh bưu phẩm.';
+const faceIdPermission = 'THACO ONE dùng Face ID để đăng nhập nhanh.';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: `${nameSuffix[appEnv]}THACO HRM`,
+  name: `${nameSuffix[appEnv]}THACO ONE`,
   slug: 'thaco-hrm-mobile',
   owner: 'nguyenvandang',
   version,
   orientation: 'portrait',
   icon: './assets/images/icon.png',
-  scheme: 'thacohrm',
+  scheme: 'thacoone',
   userInterfaceStyle: 'automatic',
   ios: {
-    bundleIdentifier: 'vn.com.thaco.hrm',
+    bundleIdentifier: 'com.thaco.one',
     supportsTablet: false,
     infoPlist: {
       NSCameraUsageDescription: cameraPermission,
@@ -45,7 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   android: {
-    package: 'vn.com.thaco.hrm',
+    package: 'com.thaco.one',
     adaptiveIcon: {
       backgroundColor: '#00539B',
       foregroundImage: './assets/images/android-icon-foreground.png',

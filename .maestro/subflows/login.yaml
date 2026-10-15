@@ -1,6 +1,6 @@
 # Signs in as ${USERNAME} / ${PASSWORD} (MSNV domain left as configured).
 # Signs out first when another account is still signed in.
-appId: vn.com.thaco.hrm
+appId: com.thaco.one
 ---
 - launchApp:
     stopApp: true

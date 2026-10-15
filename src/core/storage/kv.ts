@@ -1,10 +1,10 @@
 import { createMMKV } from 'react-native-mmkv';
 
 /** Small settings and per-device preferences. Never put secrets here (use SecureStore). */
-export const kv = createMMKV({ id: 'thaco-hrm.settings' });
+export const kv = createMMKV({ id: 'thaco-one.settings' });
 
 /** Persisted TanStack Query cache. Cleared on sign-out. */
-export const queryCacheStore = createMMKV({ id: 'thaco-hrm.query-cache' });
+export const queryCacheStore = createMMKV({ id: 'thaco-one.query-cache' });
 
 export const kvKeys = {
   language: 'settings.language',

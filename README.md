@@ -1,4 +1,4 @@
-# THACO HRM (mobile)
+# THACO ONE (mobile)
 
 Ứng dụng di động nội bộ cho nhân viên THACO (iOS + Android), gồm hai mảng nối với hai back-end riêng:
 
@@ -26,7 +26,7 @@ Cấu hình app nằm ở `app.config.ts`. Biến môi trường được quản
 
 | Biến | Ý nghĩa |
 |---|---|
-| `APP_ENV` | development / preview / production; đổi tên app thành "THACO HRM (Dev)" / "(Preview)" / "THACO HRM". Khi build, `eas.json` tự đặt theo profile |
+| `APP_ENV` | development / preview / production; đổi tên app thành "THACO ONE (Dev)" / "(Preview)" / "THACO ONE". Khi build, `eas.json` tự đặt theo profile |
 | `EXPO_PUBLIC_PARCEL_API_URL`, `EXPO_PUBLIC_ROOM_API_URL` | Gốc URL hai back-end (không có `/api`). Back-end .NET chạy local: `http://localhost:5211` (bưu phẩm), `http://localhost:5113` (phòng họp) |
 | `EXPO_PUBLIC_PAYTIME_URL`, `EXPO_PUBLIC_PAYTIME_IOS_STORE_URL`, `EXPO_PUBLIC_PAYTIME_ANDROID_STORE_URL` | Mở app THACO Paytime, hoặc trang cửa hàng nếu chưa cài |
 | `EXPO_PUBLIC_SSO_ISSUER`, `EXPO_PUBLIC_SSO_CLIENT_ID`, `EXPO_PUBLIC_SSO_SCOPES` | THACO SSO (Keycloak). Form đăng nhập luôn gửi tài khoản tới realm này (không mở trình duyệt), nên `CLIENT_ID` bắt buộc: client public, bật *Direct access grants*. Mặc định issuer `https://sso.thaco.com.vn/realms/thacogroup`, scope `openid profile email` |
@@ -43,9 +43,9 @@ Build EAS (local lẫn cloud) tự lấy biến của môi trường ứng với
 | `npm start` · `start:clear` · `start:prod` | Metro · xoá cache · chế độ production (tắt dev, minify) |
 | `npm run android` · `ios` | Build + cài development build |
 | `npm run android:release` · `ios:release` | Build release lên emulator / simulator, dùng `.env` hiện tại |
-| `npm run build:apk` | APK preview, build local → `build/thaco-hrm-preview.apk` |
-| `npm run build:apk:dev` | APK development client, build local → `build/thaco-hrm-dev.apk` |
-| `npm run build:aab` | AAB production, build local → `build/thaco-hrm.aab` |
+| `npm run build:apk` | APK preview, build local → `build/thaco-one-preview.apk` |
+| `npm run build:apk:dev` | APK development client, build local → `build/thaco-one-dev.apk` |
+| `npm run build:aab` | AAB production, build local → `build/thaco-one.aab` |
 | `npm run build:apk:cloud` | APK preview build trên cloud EAS |
 | `npm run check` | typecheck + lint + test |
 | `npm run doctor` · `native:clean` | `expo-doctor` · prebuild lại `ios/` `android/` từ đầu |

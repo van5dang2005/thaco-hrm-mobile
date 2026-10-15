@@ -1,5 +1,5 @@
 {
-  "name": "thaco-hrm-mobile",
+  "name": "thaco-one-mobile",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
@@ -88,9 +88,10 @@
     "e2e": "maestro test .maestro",
     "doctor": "npx expo-doctor",
     "native:clean": "expo prebuild --clean",
-    "build:apk:dev": "eas build --local --platform android --profile development --output build/thaco-hrm-dev.apk",
-    "build:apk": "eas build --local --platform android --profile preview --output build/thaco-hrm-preview.apk",
-    "build:aab": "eas build --local --platform android --profile production --output build/thaco-hrm.aab",
+    "build:apk:dev": "eas build --local --platform android --profile development --output build/thaco-one-dev.apk",
+    "build:apk": "eas build --local --platform android --profile preview --output build/thaco-one-preview.apk",
+    "build:apk:prod": "eas build --local --platform android --profile production-apk --output build/thaco-one.apk",
+    "build:aab": "eas build --local --platform android --profile production --output build/thaco-one.aab",
     "build:apk:cloud": "eas build --platform android --profile preview"
   },
   "private": true,

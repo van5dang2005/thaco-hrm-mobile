@@ -1,5 +1,5 @@
 # Reception hands the first waiting parcel to its own receiver (eligibility "Chính chủ").
-appId: vn.com.thaco.hrm
+appId: com.thaco.one
 name: Bàn giao bưu phẩm
 tags: [parcels]
 ---
@@ -8,7 +8,7 @@ tags: [parcels]
     env:
       USERNAME: nhung.vh
       PASSWORD: "123456"
-- openLink: thacohrm://parcels/reception
+- openLink: thacoone://parcels/reception
 - tapOn:
     id: reception-status-1
 - tapOn:

@@ -204,11 +204,11 @@ export function LoginScreen() {
         <View className="overflow-hidden" style={{ backgroundColor: bg, paddingTop: insets.top + 14, paddingHorizontal: 22, paddingBottom: 96 }}>
           <LoginHeaderArt />
           <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center gap-3" accessibilityRole="header" accessibilityLabel="THACO HRM">
+            <View className="flex-row items-center gap-3" accessibilityRole="header" accessibilityLabel="THACO ONE">
               <Image source={images.wordmark} style={{ height: 20, width: 20 * WORDMARK_RATIO }} contentFit="contain" accessibilityIgnoresInvertColors />
               <View className="h-4 w-px" style={{ backgroundColor: onBlue(0.35) }} />
               <Text weight="bold" style={{ fontSize: 12, lineHeight: 15, letterSpacing: 1.7, color: '#CFE0F1' }}>
-                HRM
+                ONE
               </Text>
             </View>
             <Pressable

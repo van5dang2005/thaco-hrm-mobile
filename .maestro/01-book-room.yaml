@@ -1,6 +1,6 @@
 # lan.nt books "Tam Hiệp" 15:00–16:00 two days ahead; the room has one approval level (khoa.nm).
 # Wizard: B1 room → B2 time slots → B3 details → B4 confirm.
-appId: vn.com.thaco.hrm
+appId: com.thaco.one
 name: Đặt phòng họp
 tags: [rooms]
 ---
@@ -9,7 +9,7 @@ tags: [rooms]
     env:
       USERNAME: lan.nt
       PASSWORD: "123456"
-- openLink: thacohrm://rooms/book
+- openLink: thacoone://rooms/book
 - tapOn:
     id: booking-area
 - tapOn: "THACO Chu Lai"
