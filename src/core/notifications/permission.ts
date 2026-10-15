@@ -1,13 +1,13 @@
 import { requireOptionalNativeModule } from 'expo';
 import { Linking } from 'react-native';
 
-type NotificationsModule = typeof import('expo-notifications');
+export type NotificationsModule = typeof import('expo-notifications');
 
 /**
  * expo-notifications, or null on a development build installed before it was added (the native
  * module is missing until `expo run:ios|android` / an EAS build): importing it there would crash.
  */
-function notifications(): NotificationsModule | null {
+export function notifications(): NotificationsModule | null {
   if (!requireOptionalNativeModule('ExpoNotificationPermissionsModule')) return null;
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   return require('expo-notifications') as NotificationsModule;

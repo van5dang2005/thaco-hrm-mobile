@@ -1,5 +1,6 @@
 import { setUnauthorizedHandler } from '@/core/api/http';
 import type { LoginRequest } from '@/core/api/types';
+import { unregisterPushToken } from '@/core/notifications/push';
 import { clearQueryCache } from '@/core/query/queryClient';
 import { kv, kvKeys, readJSON, writeJSON } from '@/core/storage/kv';
 
@@ -143,6 +144,8 @@ export async function signOut(reason: Exclude<SignOutReason, 'launch'> = 'user')
     // Expired: Keycloak no longer knows the session. Biometric session: ending it would revoke the token
     // Face ID / fingerprint opens next time.
     if (pair && reason !== 'expired' && !onBiometricSession(pair.refreshToken)) void endSsoSession(pair.refreshToken);
+    // Still signed in: stop this phone getting the account's pushes. An expired session cannot call the back-ends.
+    if (reason !== 'expired') await unregisterPushToken();
     await tokenStore.clear();
     kv.remove(kvKeys.ssoAccount);
     kv.remove(kvKeys.myApps);

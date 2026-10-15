@@ -9,6 +9,7 @@ import { env } from '@/core/config/env';
 import { errorMessage } from '@/core/errors/errorMessage';
 import { setLanguage, type Language } from '@/core/i18n';
 import { getNotificationPermission, openNotificationSettings, requestNotificationPermission, type NotificationPermission } from '@/core/notifications/permission';
+import { registerPushToken } from '@/core/notifications/push';
 import { type BiometricKind, biometricKind, disableBiometric, isBiometricEnabled } from '@/core/session/biometric';
 import { enableBiometricSignIn, signOut } from '@/core/session/session';
 import { useProfile } from '@/core/session/useMe';
@@ -234,6 +235,7 @@ export function ProfileScreen() {
     let permission = await getNotificationPermission();
     if (permission.available && !permission.granted && permission.canAskAgain) permission = await requestNotificationPermission();
     notifications.setPermission(permission);
+    if (permission.granted) void registerPushToken();
     if (permission.available && !permission.granted) {
       Alert.alert(t('profile.notificationsDeniedTitle'), t('profile.notificationsDenied'), [
         { text: t('common.cancel'), style: 'cancel' },

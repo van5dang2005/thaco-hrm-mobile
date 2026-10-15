@@ -52,6 +52,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       NSPhotoLibraryUsageDescription: photosPermission,
       NSFaceIDUsageDescription: faceIdPermission,
       LSApplicationQueriesSchemes: ['thacopaytime'],
+      // Export compliance: only the OS's HTTPS/TLS and Keychain, which are exempt, so App Store Connect stops asking.
+      ITSAppUsesNonExemptEncryption: false,
     },
   },
   android: {

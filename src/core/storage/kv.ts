@@ -23,6 +23,10 @@ export const kvKeys = {
   /** `{ username, domain, sessionId }`: the account Face ID / fingerprint signs in, and the Keycloak session of its offline token. Set only while biometric sign-in is on. */
   biometricAccount: 'auth.biometricSession',
   lastAreaId: 'rooms.lastAreaId',
+  /** Expo push token last sent to the back-ends, so sign-out can withdraw it. */
+  pushToken: 'push.token',
+  /** The app has shown the system notification prompt once after sign-in; it never asks unprompted again. */
+  pushPrompted: 'push.prompted',
 } as const;
 
 export function readJSON<T>(key: string): T | undefined {
