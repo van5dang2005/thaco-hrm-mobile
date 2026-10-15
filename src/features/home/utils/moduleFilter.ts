@@ -13,6 +13,8 @@ export type AccessContext = {
 export function canSeeModule(module: Pick<HomeModule, 'permission'>, ctx: AccessContext) {
   const permission = module.permission;
   if (!permission) return true;
+  // Listed only while the portal grants the app (`appModules`).
+  if (permission.app !== undefined) return true;
   if (!ctx.connected[permission.service]) return false;
   return !permission.capability || ctx.has(permission.capability);
 }
@@ -62,12 +64,18 @@ export function appModules(apps: readonly MyApp[] | null, native: readonly HomeM
   for (const app of sortApps(apps ?? [])) {
     if (seen.has(app.code)) continue;
     seen.add(app.code);
-    const tiles = native.filter((module) => module.permission && serviceAppCodes[module.permission.service] === app.code);
+    const tiles = native.filter((module) => portalCode(module) === app.code);
     const tile = tiles.length ? null : webModule(app);
     own.push(...tiles);
     if (tile) web.push(tile);
   }
   return [...own, ...web];
+}
+
+/** Portal code of the app that grants a tile with screens here. */
+function portalCode({ permission }: Pick<HomeModule, 'permission'>) {
+  if (!permission) return undefined;
+  return permission.app ?? serviceAppCodes[permission.service];
 }
 
 /** Non-empty groups in the order of their first module, each keeping the order of its modules. */

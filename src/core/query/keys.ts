@@ -41,4 +41,8 @@ export const qk = {
     receptionStats: (params: Record<string, unknown>) => ['parcels', 'reception-stats', params] as const,
     departments: ['parcels', 'departments'] as const,
   },
+  guests: {
+    root: ['guests'] as const,
+    visit: (qr: string) => ['guests', 'visit', qr] as const,
+  },
 };

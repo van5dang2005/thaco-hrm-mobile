@@ -23,7 +23,7 @@ const nameSuffix: Record<AppEnv, string> = { development: '(Dev) ', preview: '(B
 /** expo.dev project `@nguyenvandang/thaco-one-mobile`; also the EAS Update endpoint. */
 const easProjectId = 'a20357f7-e209-4655-bb90-a2456a02f774';
 
-const cameraPermission ='THACO ONE dùng camera để chụp ảnh bưu phẩm khi tiếp nhận.';
+const cameraPermission = 'THACO ONE dùng camera để chụp ảnh bưu phẩm khi tiếp nhận và quét mã QR của khách.';
 const photosPermission = 'THACO ONE cần truy cập thư viện ảnh để đính kèm ảnh bưu phẩm.';
 const faceIdPermission = 'THACO ONE dùng Face ID để đăng nhập nhanh.';
 
@@ -91,6 +91,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-sharing',
     ['expo-image-picker', { cameraPermission, photosPermission }],
+    ['expo-camera', { cameraPermission, microphonePermission: false, recordAudioAndroid: false }],
     ['expo-local-authentication', { faceIDPermission: faceIdPermission }],
     'expo-notifications',
   ],

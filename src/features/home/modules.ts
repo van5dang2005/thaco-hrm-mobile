@@ -11,6 +11,7 @@ import {
   ChartGanttIcon,
   InboxIcon,
   PackageIcon,
+  ScanQrCodeIcon,
 } from '@/shared/ui/icons';
 
 import {
@@ -23,7 +24,7 @@ import {
 } from './hooks/useSignals';
 
 /** "Theo nhóm" card and icon tone: one per app with screens here, `other` for the apps that open on the web. */
-export type ModuleGroup = 'meeting' | 'parcel' | 'other';
+export type ModuleGroup = 'meeting' | 'parcel' | 'guest' | 'other';
 
 /** Key under `home.modules` in the locale files. */
 export type ModuleLabelKey = keyof (typeof vi)['home']['modules'];
@@ -31,9 +32,12 @@ export type ModuleLabelKey = keyof (typeof vi)['home']['modules'];
 /**
  * Who may see a module. `service`: the back-end the THACO apps portal must grant (`my-apps`). `capability`:
  * a server-side permission (see `useCapabilities`; per-resource flags from `my-permissions` are
- * Administrator-only on these back-ends, so they cannot be read for regular staff).
+ * Administrator-only on these back-ends, so they cannot be read for regular staff). `app`: the portal code
+ * of an app whose tiles need no back-end here (yet).
  */
-export type ModulePermission = { service: ServiceId; capability?: Capability };
+export type ModulePermission =
+  | { service: ServiceId; capability?: Capability; app?: never }
+  | { app: string; service?: never; capability?: never };
 
 /** A locale key for a tile with screens here; the portal's name (`title`) for an app that opens on the web. */
 type ModuleLabel =
@@ -134,5 +138,13 @@ export const nativeModules: readonly HomeModule[] = [
     route: '/parcels/reception',
     permission: { service: 'parcel', capability: 'parcel.reception' },
     summary: useReceptionSummary,
+  },
+  {
+    id: 'guest-scan',
+    group: 'guest',
+    labelKey: 'guestScan',
+    icon: ScanQrCodeIcon,
+    route: '/guests/scan',
+    permission: { app: 'GUEST_SCHEDULE_MANAGEMENT_WEB' },
   },
 ];

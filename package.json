@@ -16,6 +16,7 @@
     "clsx": "^2.1.1",
     "eslint-config-expo": "~55.0.1",
     "expo": "~55.0.31",
+    "expo-camera": "~55.0.23",
     "expo-constants": "~55.0.17",
     "expo-dev-client": "~55.0.40",
     "expo-device": "~55.0.21",
