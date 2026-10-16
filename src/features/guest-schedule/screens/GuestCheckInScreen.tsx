@@ -123,7 +123,7 @@ function CheckInForm({ visit, header }: { visit: GuestVisit; header: ReactNode }
 
   const submit = useMutation({
     mutationFn: () =>
-      guestApi.checkIn({ visitId: visit.id, checkInAt: checkInAt.toISOString(), actualGuestCount: count, note: note.trim() || undefined }, visit),
+      guestApi.checkIn({ checkInAt: checkInAt.toISOString(), actualGuestCount: count, note: note.trim() || undefined }, visit),
     onSuccess: (done) =>
       router.replace({
         pathname: '/guests/success',

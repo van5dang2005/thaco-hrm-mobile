@@ -1,60 +1,53 @@
-import { addDays, atMinutes, todayKey } from '@/core/time/vn';
+import { isApiError } from '@/core/api/ApiError';
+import { guestScheduleApi } from '@/core/api/clients';
 
-import { type GuestCheckIn, type GuestCheckInInput, GuestError, type GuestVisit } from '../types';
+import { type GuestCheckIn, type GuestCheckInInput, GuestError, type GuestScheduleDto, type GuestVisit } from '../types';
+import { qrCodeOf, toVisit } from '../utils/visit';
 
-/*
- * MOCK until the guest-schedule back-end ships: same signatures as the real calls, canned data after a short
- * delay. Swap each body for a request to that back-end's client; the screens keep working unchanged.
- *
- * Test QRs: any text gives the sample visit (a registration-number-like text becomes its `code`); a JSON object
- * overrides the sample's fields (`{"code":"AUT…","groupName":"…","guestCount":6}`); "INVALID…" and
- * "EXPIRED…" give the two errors.
+/** Mobile endpoints of the guest-schedule back-end, keyed by the code a guest QR holds. */
+const qrPath = (qrCode: string) => `/api/GuestSchedules/mobile/qr/${encodeURIComponent(qrCode)}`;
+
+/**
+ * A wrong or ended visit as the guard should read it; anything else (network, server, rights) stays as thrown.
+ * The API has no documented error codes yet, so this goes by status and wording. "Invalid" wording only means a
+ * wrong code on the lookup: on check-in it may be about the form (head count, time).
  */
-
-const LATENCY_MS = 600;
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-const REGISTRATION_CODE = /^[A-Z]{2,5}\d{6,}$/i;
-
-function sampleVisit(): GuestVisit {
-  const today = todayKey();
-  return {
-    id: 'mock-visit-1',
-    code: 'AUT01020260002',
-    groupName: 'Đoàn KIA Hàn Quốc',
-    purpose: 'Khảo sát dây chuyền lắp ráp',
-    guestCount: 4,
-    fromDate: atMinutes(today, 8 * 60).toISOString(),
-    toDate: atMinutes(addDays(today, 3), 17 * 60).toISOString(),
-    location: 'Phòng họp số 1 - Tòa nhà THACO',
-  };
-}
-
-/** The QR's fields when it holds a JSON object. */
-function jsonFields(text: string): Partial<GuestVisit> | null {
-  try {
-    const value: unknown = JSON.parse(text);
-    return value && typeof value === 'object' && !Array.isArray(value) ? (value as Partial<GuestVisit>) : null;
-  } catch {
-    return null;
-  }
+function asGuestError(error: unknown, step: 'lookup' | 'checkIn'): unknown {
+  if (!isApiError(error)) return error;
+  const said = `${error.errorCode} ${error.message}`.toLowerCase();
+  if (/expired|hết hạn|đã kết thúc/.test(said)) return new GuestError('GUEST_VISIT_EXPIRED');
+  if (error.status === 404 || (step === 'lookup' && /not_?found|invalid|không tìm thấy|không hợp lệ/.test(said))) return new GuestError('GUEST_QR_INVALID');
+  return error;
 }
 
 export const guestApi = {
-  /** The visit a scanned QR points to. */
+  /** The visit a scanned QR points to: `GET …/mobile/qr/{code}`. */
   async lookup(qr: string): Promise<GuestVisit> {
-    await delay(LATENCY_MS);
-    const text = qr.trim();
-    if (!text || /^invalid/i.test(text)) throw new GuestError('GUEST_QR_INVALID');
-    if (/^expired/i.test(text)) throw new GuestError('GUEST_VISIT_EXPIRED');
-    const sample = sampleVisit();
-    const fields = jsonFields(text);
-    if (fields) return { ...sample, ...fields };
-    return REGISTRATION_CODE.test(text) ? { ...sample, code: text.toUpperCase() } : sample;
+    const qrCode = qrCodeOf(qr);
+    if (!qrCode) throw new GuestError('GUEST_QR_INVALID');
+    let dto: GuestScheduleDto | null;
+    try {
+      dto = await guestScheduleApi.get<GuestScheduleDto | null>(qrPath(qrCode));
+    } catch (error) {
+      throw asGuestError(error, 'lookup');
+    }
+    const visit = toVisit(dto, qrCode);
+    if (!visit) throw new GuestError('GUEST_QR_INVALID');
+    return visit;
   },
 
-  /** Records the group passing the gate. */
+  /** Records the group passing the gate: `POST …/mobile/qr/{code}/check-in` with `{ time, actualAmount, note }`. */
   async checkIn(input: GuestCheckInInput, visit: GuestVisit): Promise<GuestCheckIn> {
-    await delay(LATENCY_MS);
-    return { ...input, id: `mock-check-in-${Date.now()}`, visit };
+    try {
+      await guestScheduleApi.post<unknown>(`${qrPath(visit.qrCode)}/check-in`, {
+        // UTC, as the API returns its own times.
+        time: input.checkInAt,
+        actualAmount: input.actualGuestCount,
+        note: input.note,
+      });
+    } catch (error) {
+      throw asGuestError(error, 'checkIn');
+    }
+    return { ...input, visit };
   },
 };

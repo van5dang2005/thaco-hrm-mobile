@@ -4,8 +4,14 @@
  */
 export type ServiceId = 'parcel' | 'room';
 
+/**
+ * Every back-end `createApiClient` talks to: the services above, plus ones that only answer a feature's own calls
+ * (no users/me, notifications or hub there), so they stay out of `ServiceId` and the per-service loops.
+ */
+export type ApiService = ServiceId | 'guest';
+
 type ApiErrorInit = {
-  service: ServiceId;
+  service: ApiService;
   status: number;
   errorCode: string;
   message: string;
@@ -17,7 +23,7 @@ type ApiErrorInit = {
  * the server body (`errorCode`) when present, otherwise a synthetic code (NETWORK, TIMEOUT, HTTP_404…).
  */
 export class ApiError extends Error {
-  readonly service: ServiceId;
+  readonly service: ApiService;
   readonly status: number;
   readonly errorCode: string;
   readonly details?: unknown;

@@ -2,7 +2,7 @@ import { env } from '@/core/config/env';
 import { refreshSso } from '@/core/session/sso';
 import { tokenStore } from '@/core/session/tokenStore';
 
-import { ApiError, type ServiceId } from './ApiError';
+import { type ApiService, ApiError } from './ApiError';
 import { fetchWithTimeout } from './fetchWithTimeout';
 
 type QueryPrimitive = string | number | boolean | Date;
@@ -21,10 +21,10 @@ export type RequestOptions = {
 
 type Method = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
-let unauthorizedHandler: ((service: ServiceId) => void) | null = null;
+let unauthorizedHandler: ((service: ApiService) => void) | null = null;
 
 /** Called once Keycloak refuses the refresh token (400/401); the session layer signs the user out. */
-export function setUnauthorizedHandler(handler: (service: ServiceId) => void) {
+export function setUnauthorizedHandler(handler: (service: ApiService) => void) {
   unauthorizedHandler = handler;
 }
 
@@ -43,7 +43,7 @@ export function buildUrl(baseUrl: string, path: string, query?: Query) {
   return `${baseUrl}${path}${params.length ? `?${params.join('&')}` : ''}`;
 }
 
-async function toApiError(service: ServiceId, response: Response): Promise<ApiError> {
+async function toApiError(service: ApiService, response: Response): Promise<ApiError> {
   let body: Record<string, unknown> | null = null;
   try {
     const text = await response.text();
@@ -62,7 +62,7 @@ async function toApiError(service: ServiceId, response: Response): Promise<ApiEr
 
 export type ApiClient = ReturnType<typeof createApiClient>;
 
-export function createApiClient(service: ServiceId, baseUrl: string) {
+export function createApiClient(service: ApiService, baseUrl: string) {
   async function request<T>(method: Method, path: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
     const url = buildUrl(baseUrl, path, options.query);
     const headers: Record<string, string> = { Accept: 'application/json' };

@@ -1,33 +1,50 @@
-/** A guest visit registration, what a guest QR points to. Shape agreed ahead of the guest-schedule API. */
+/** `GET /api/GuestSchedules/mobile/qr/{qrCode}`: the fields the app reads (times are UTC). */
+export type GuestScheduleDto = {
+  guestScheduleId: string;
+  /** Registration number, e.g. `AUTO1020260003`. */
+  guestCode?: string | null;
+  /** "Khách hàng Malaysia - Đàm phán xe tải". */
+  guestName?: string | null;
+  guestCount?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  purpose?: string | null;
+  /** Units that receive the guests. */
+  workingUnits?: { workingUnitId: string; workingUnitName?: string | null }[] | null;
+  members?: { memberId: string; fullName?: string | null }[] | null;
+};
+
+/** A guest visit registration, what a guest QR points to. */
 export type GuestVisit = {
   id: string;
-  /** Registration number, e.g. `AUT01020260002`. */
-  code: string;
-  /** "Đoàn KIA Hàn Quốc". */
+  /** The code the QR holds; the check-in posts to the same link. */
+  qrCode: string;
+  /** Registration number, e.g. `AUTO1020260003`. */
+  code?: string;
+  /** "Khách hàng Malaysia - Đàm phán xe tải". */
   groupName: string;
-  /** "Khảo sát dây chuyền lắp ráp". */
+  /** "Đàm phán hợp đồng xuất khẩu xe tải sang Malaysia". */
   purpose?: string | null;
   /** Registered number of guests. */
   guestCount: number;
-  /** Working period of the visit (ISO, UTC). */
+  /** Working period of the visit (ISO, UTC; empty when the API gives none). */
   fromDate: string;
   toDate: string;
-  /** Where the guests are received: "Phòng họp số 1 - Tòa nhà THACO". */
+  /** Where the guests are received: the receiving units, "Công ty TNHH MTV Sản xuất và Lắp ráp xe tải THACO". */
   location?: string | null;
 };
 
-/** Body of a gate check-in (the guard confirms the group at the gate). */
+/** A gate check-in (the guard confirms the group at the gate). */
 export type GuestCheckInInput = {
-  visitId: string;
   /** ISO, UTC. */
   checkInAt: string;
   actualGuestCount: number;
   note?: string;
 };
 
-export type GuestCheckIn = GuestCheckInInput & { id: string; visit: GuestVisit };
+export type GuestCheckIn = GuestCheckInInput & { visit: GuestVisit };
 
-/** Business error codes of the guest API. */
+/** What a failed lookup or check-in means for the guard, read from the API's status and message. */
 export type GuestErrorCode = 'GUEST_QR_INVALID' | 'GUEST_VISIT_EXPIRED';
 
 export class GuestError extends Error {
