@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
 import { useProfile } from '@/core/session/useMe';
+import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatTime } from '@/core/time/vn';
 import { bookingFrom } from '@/features/room-booking/utils/booking';
 import { useNow } from '@/shared/hooks/useNow';
@@ -28,13 +29,19 @@ type Props = {
 /** Blue greeting card (2c): avatar 48, time-of-day greeting, name, unit, then my next meeting today. */
 export function HeroCard({ showNextMeeting, onBook }: Props) {
   const { t } = useTranslation();
-  const { bg, fg, text2, accent } = useHeaderColors();
+  const { colors, scheme } = useTheme();
+  const { fg, text2, accent } = useHeaderColors();
   const profile = useProfile();
   const greeting = useGreeting();
   const unit = [profile.departmentName, profile.unitName].filter(Boolean).join(' · ');
 
   return (
-    <View testID="home-hero" className="gap-3.5 overflow-hidden rounded-[24px] p-4" style={{ backgroundColor: bg }}>
+    <View
+      testID="home-hero"
+      className="gap-3.5 overflow-hidden rounded-[24px] p-4"
+      // Dark mode: deep navy instead of the near-black header color, with a lit top edge, so the card stands off the page.
+      style={[{ backgroundColor: colors.hero }, scheme === 'dark' ? { borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', borderTopColor: 'rgba(255, 255, 255, 0.18)' } : null]}
+    >
       <HeaderCircles />
       <View className="flex-row items-center gap-3">
         <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2" style={{ borderColor: onBlue(0.85), backgroundColor: '#DCE8F4' }}>

@@ -19,7 +19,7 @@ import { useModuleLabel } from '../../hooks/useModules';
 import { pickNextMeeting, useFreeRooms, useTodayMeetings, useTodoItems } from '../../hooks/useSignals';
 import type { HomeModule } from '../../modules';
 import { todoTones, useVisibleTodos } from '../TodoTiles';
-import { chunk, type LayoutProps, ModuleIcon, RowPadding, SectionHeader, TileMarker, useGroupTone, useTileA11yLabel } from './shared';
+import { chunk, type LayoutProps, ModuleIcon, RowPadding, SectionHeader, TileMarker, useGroupTone, useHomeCardEdge, useTileA11yLabel } from './shared';
 
 /**
  * "Thẻ" (2g): to-do card (left, two rows tall), today's meetings and free rooms (right), then every service as a
@@ -61,9 +61,12 @@ export function CardLayout({ modules, signals, onOpen, showTodo, onCustomize }: 
 }
 
 function WidgetCard({ testID, onPress, label, children }: { testID: string; onPress?: () => void; label: string; children: ReactNode }) {
+  const edge = useHomeCardEdge();
   return (
     <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} disabled={!onPress} onPress={onPress} className="active:opacity-80">
-      <Card className="gap-2.5 overflow-visible p-3.5">{children}</Card>
+      <Card className="gap-2.5 overflow-visible p-3.5" style={edge}>
+        {children}
+      </Card>
     </Pressable>
   );
 }
@@ -76,9 +79,10 @@ function TodoCard({ todos, onOpen }: { todos: ReturnType<typeof useVisibleTodos>
   const counts = todos.map(({ kind }) => items[kind].count ?? 0);
   const total = counts.reduce((a, b) => a + b, 0);
   const loading = todos.some(({ kind }) => items[kind].isLoading && items[kind].count === undefined);
+  const edge = useHomeCardEdge();
 
   return (
-    <Card testID="home-card-todo" className="flex-1 gap-3 overflow-visible p-3.5">
+    <Card testID="home-card-todo" className="flex-1 gap-3 overflow-visible p-3.5" style={edge}>
       <View className="flex-row items-center justify-between">
         <RoundIcon icon={ClockIcon} tone="danger" size={36} />
         <Icon icon={ChevronRightIcon} size={16} color="subtle" />
@@ -233,6 +237,7 @@ function ModuleCard({ module, summary, count, onOpen }: { module: HomeModule; su
   // Portal apps have no summary hook: their description, else where they open.
   const note = summary?.data ?? (summary?.isLoading ? undefined : module.description ?? (module.externalUrl ? t('home.summary.webApp') : undefined));
   const urgent = !!count && !!module.urgentWhenBadged;
+  const edge = useHomeCardEdge();
   return (
     <Pressable
       testID={`home-module-${module.id}`}
@@ -240,7 +245,7 @@ function ModuleCard({ module, summary, count, onOpen }: { module: HomeModule; su
       accessibilityLabel={a11y(module, label(module), count, note)}
       onPress={() => onOpen(module)}
       className="min-h-[58px] min-w-0 flex-1 flex-row items-center gap-2.5 rounded-[16px] bg-elevated px-3 py-2.5 active:opacity-80"
-      style={[shadows.card, urgent ? { borderWidth: 1.5, borderColor: colors['danger-border'] } : null]}
+      style={[shadows.card, edge, urgent ? { borderWidth: 1.5, borderColor: colors['danger-border'] } : null]}
     >
       <View className="h-9 w-9 items-center justify-center rounded-[11px]" style={tone.box}>
         <ModuleIcon module={module} size={18} color={tone.icon} />

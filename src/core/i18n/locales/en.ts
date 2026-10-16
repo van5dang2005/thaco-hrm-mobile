@@ -230,7 +230,6 @@ const en: Translation = {
     signingIn: 'Signing in…',
     portal: 'Internal HR portal',
     headline: 'Sign in to\nyour THACO account',
-    chips: { rooms: 'Meeting rooms', parcels: 'Parcels', hr: 'HR' },
     change: 'Change',
     remember: 'Remember me',
     securityNote: 'Use your company computer account. The app never stores your password: biometric sign-in uses a session key encrypted on this device.',
@@ -604,8 +603,14 @@ const en: Translation = {
       done: 'Shared with {{count}} people',
     },
   },
+  appearance: {
+    title: 'Appearance',
+    hint: 'Automatic: follows your device setting',
+    system: 'Automatic',
+    light: 'Light',
+    dark: 'Dark',
+  },
   profile: {
-    title: 'Profile',
     employeeCode: 'Employee ID',
     jobTitle: 'Job title',
     email: 'Email',

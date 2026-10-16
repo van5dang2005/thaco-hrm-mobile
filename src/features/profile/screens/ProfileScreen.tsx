@@ -37,6 +37,7 @@ import {
   MailIcon,
   PhoneIcon,
   ScanFaceIcon,
+  SunMoonIcon,
   type AppIcon,
 } from '@/shared/ui/icons';
 import { onBlue, useHeaderColors, useLightStatusBar } from '@/shared/ui/ScreenShell';
@@ -44,6 +45,7 @@ import { Eyebrow } from '@/shared/ui/SectionTitle';
 import { SelectSheet } from '@/shared/ui/SelectSheet';
 import { Text } from '@/shared/ui/Text';
 import { TextField } from '@/shared/ui/TextField';
+import { ThemeModeToggle } from '@/shared/ui/ThemeModeToggle';
 import { toast } from '@/shared/ui/Toast';
 import { Toggle } from '@/shared/ui/Toggle';
 
@@ -78,7 +80,7 @@ function ContactRow({ icon, label, value, mono, divider }: { icon: AppIcon; labe
   return (
     <>
       {divider ? <Divider inset={ROW_INSET} /> : null}
-      <View className="min-h-[52px] flex-row items-center gap-3 px-3.5 py-2">
+      <View className="min-h-[48px] flex-row items-center gap-3 px-3.5 py-1.5">
         <RowIcon icon={icon} />
         <View className="min-w-0 flex-1 gap-px">
           <Text numberOfLines={1} className="text-muted" style={{ fontSize: 11, lineHeight: 14 }}>
@@ -191,7 +193,7 @@ function useNotificationSetting() {
 /** "Cá nhân" tab (7a): identity on the blue header, read-only contact card over it, settings, sign-out. */
 export function ProfileScreen() {
   const { t, i18n } = useTranslation();
-  const { colors } = useTheme();
+  const { colors, preference, setPreference } = useTheme();
   const { bg, fg, text2 } = useHeaderColors();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
@@ -260,17 +262,14 @@ export function ProfileScreen() {
         {/* Blue above the header so pull-to-refresh never shows the grey canvas. */}
         <View pointerEvents="none" style={{ position: 'absolute', top: -1000, left: 0, right: 0, height: 1000, backgroundColor: bg }} />
 
-        <View testID="profile-header" className="gap-[18px] overflow-hidden" style={{ backgroundColor: bg, paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 42 }}>
+        <View testID="profile-header" className="gap-[18px] overflow-hidden" style={{ backgroundColor: bg, paddingTop: insets.top + 6, paddingHorizontal: 20, paddingBottom: 38 }}>
           <LoginHeaderArt ringCount={4} />
-          <Text weight="bold" accessibilityRole="header" style={{ fontSize: 22, lineHeight: 28, letterSpacing: -0.3, color: fg }}>
-            {t('profile.title')}
-          </Text>
           <View className="flex-row items-center gap-3.5">
             <View className="rounded-full p-1" style={{ backgroundColor: onBlue(0.18) }}>
               <Avatar name={profile.fullname} uri={profile.avatarUrl} size={68} light />
             </View>
             <View className="min-w-0 flex-1 gap-1">
-              <Text weight="bold" numberOfLines={1} style={{ fontSize: 20, lineHeight: 26, letterSpacing: -0.3, color: fg }}>
+              <Text weight="bold" numberOfLines={1} accessibilityRole="header" style={{ fontSize: 20, lineHeight: 26, letterSpacing: -0.3, color: fg }}>
                 {profile.fullname ?? '—'}
               </Text>
               {profile.jobTitleName ? (
@@ -293,11 +292,25 @@ export function ProfileScreen() {
             {profile.workplace ? <ContactRow divider icon={BuildingIcon} label={t('profile.workplace')} value={profile.workplace} /> : null}
           </ProfileCard>
 
-          <View className="px-1 pt-2">
+          <View className="px-1">
             <Eyebrow>{t('profile.settings')}</Eyebrow>
           </View>
           <ProfileCard>
-            <SettingRow testID="profile-language" icon={GlobeIcon} label={t('profile.language')} value={languageNames[language]} onPress={() => setSheet('language')} />
+            <View testID="profile-appearance" className="gap-2 px-3.5 pb-2.5 pt-2">
+              <View className="flex-row items-center gap-3">
+                <RowIcon icon={SunMoonIcon} />
+                <View className="min-w-0 flex-1 gap-px">
+                  <Text weight="semibold" numberOfLines={1} style={{ fontSize: 13.5, lineHeight: 18 }}>
+                    {t('appearance.title')}
+                  </Text>
+                  <Text numberOfLines={2} className="text-muted" style={{ fontSize: 11, lineHeight: 14 }}>
+                    {t('appearance.hint')}
+                  </Text>
+                </View>
+              </View>
+              <ThemeModeToggle testID="profile-theme" value={preference} onChange={setPreference} />
+            </View>
+            <SettingRow divider testID="profile-language" icon={GlobeIcon} label={t('profile.language')} value={languageNames[language]} onPress={() => setSheet('language')} />
             {biometric !== 'none' ? (
               <SettingRow
                 divider
@@ -322,7 +335,7 @@ export function ProfileScreen() {
             testID="profile-signout"
             accessibilityRole="button"
             onPress={confirmSignOut}
-            className="mt-1 h-[50px] flex-row items-center justify-center gap-2 rounded-[14px] bg-elevated active:opacity-70"
+            className="h-[48px] flex-row items-center justify-center gap-2 rounded-[14px] bg-elevated active:opacity-70"
             style={{ borderWidth: 1.5, borderColor: colors['danger-border'] }}
           >
             <Icon icon={LogOutIcon} size={18} weight="bold" rawColor={colors['danger-text']} />

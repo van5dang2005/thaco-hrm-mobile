@@ -230,7 +230,6 @@ const vi = {
     signingIn: 'Đang đăng nhập…',
     portal: 'Cổng nhân sự nội bộ',
     headline: 'Đăng nhập\ntài khoản THACO',
-    chips: { rooms: 'Phòng họp', parcels: 'Bưu phẩm', hr: 'Nhân sự' },
     change: 'Đổi',
     remember: 'Ghi nhớ đăng nhập',
     securityNote: 'Dùng tài khoản đăng nhập máy tính công ty. Ứng dụng không lưu mật khẩu: đăng nhập sinh trắc học dùng một khóa phiên được mã hóa trên máy.',
@@ -605,8 +604,14 @@ const vi = {
       done: 'Đã chia sẻ cho {{count}} người',
     },
   },
+  appearance: {
+    title: 'Chế độ hiển thị',
+    hint: 'Tự động: theo cài đặt sáng / tối của máy',
+    system: 'Tự động',
+    light: 'Sáng',
+    dark: 'Tối',
+  },
   profile: {
-    title: 'Cá nhân',
     employeeCode: 'MSNV',
     jobTitle: 'Chức danh',
     email: 'Email',

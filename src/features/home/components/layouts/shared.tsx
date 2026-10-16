@@ -1,8 +1,9 @@
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type ViewStyle } from 'react-native';
 
+import { withAlpha } from '@/core/theme/palette';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { cn } from '@/shared/lib/cn';
 import { CountBadge } from '@/shared/ui/CountBadge';
@@ -44,6 +45,27 @@ export function useGroupTone(group: ModuleGroup) {
     case 'other':
       return { box: { backgroundColor: colors.elevated, borderWidth: 1, borderColor: colors.line }, icon: colors['ink-2'], bar: colors.subtle };
   }
+}
+
+/**
+ * Dark mode: shadows vanish on the near-black home page, so home cards get a hairline with a lit top
+ * edge to read as raised. Light mode keeps the plain card.
+ */
+export function useHomeCardEdge(): ViewStyle | null {
+  const { scheme } = useTheme();
+  return scheme === 'dark' ? { borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)', borderTopColor: 'rgba(255, 255, 255, 0.17)' } : null;
+}
+
+/** Dark mode: a wash of the group color from the card's top-right corner (the header circles, in color). */
+export function CardGlow({ color, radius = 20 }: { color: string; radius?: number }) {
+  const { scheme } = useTheme();
+  if (scheme !== 'dark') return null;
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, borderRadius: radius - 1, overflow: 'hidden' }}>
+      <View style={{ position: 'absolute', width: 170, height: 170, borderRadius: 85, right: -70, top: -105, backgroundColor: withAlpha(color, 0.14) }} />
+      <View style={{ position: 'absolute', width: 84, height: 84, borderRadius: 42, right: 46, top: -52, backgroundColor: withAlpha(color, 0.07) }} />
+    </View>
+  );
 }
 
 /** A module's glyph at `size`: the portal image of a web app (a little larger, logos carry their own margin), else its lucide icon. */

@@ -78,7 +78,13 @@ export function HomeScreen() {
   return (
     <View className="flex-1" style={{ backgroundColor: colors['home-bg'] }}>
       <View className="flex-row items-center justify-between px-5 pb-3" style={{ paddingTop: insets.top + 8 }}>
-        <View accessibilityRole="header" accessibilityLabel="THACO" className="h-[34px] justify-center rounded-full bg-header px-3.5">
+        {/* The brand blue in both schemes (the dark header color is near-black), lit in dark mode so it stands off the page. */}
+        <View
+          accessibilityRole="header"
+          accessibilityLabel="THACO"
+          className="h-[34px] justify-center rounded-full bg-brand px-3.5"
+          style={dark ? { borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.16)', boxShadow: '0px 6px 18px rgba(10, 90, 166, 0.45)' } : null}
+        >
           <Image source={images.wordmark} style={{ height: 14, width: 14 * WORDMARK_RATIO }} contentFit="contain" accessibilityIgnoresInvertColors />
         </View>
         <View className="flex-row gap-2.5">

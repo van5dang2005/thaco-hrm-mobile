@@ -1,6 +1,6 @@
 import { vars } from 'nativewind';
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
-import { useColorScheme, View } from 'react-native';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Appearance, useColorScheme, View } from 'react-native';
 
 import { kv, kvKeys } from '@/core/storage/kv';
 
@@ -33,6 +33,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const scheme: ColorScheme =
     preference === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preference;
+
+  // Native UI drawn outside our palette (alerts, keyboard, date pickers) follows the chosen scheme too.
+  useEffect(() => {
+    Appearance.setColorScheme(preference === 'system' ? 'unspecified' : preference);
+  }, [preference]);
 
   const setPreference = useCallback((next: SchemePreference) => {
     if (next === 'system') kv.remove(kvKeys.colorScheme);

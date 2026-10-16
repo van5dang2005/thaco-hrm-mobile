@@ -21,23 +21,19 @@ import { Banner } from '@/shared/ui/Banner';
 import { Button } from '@/shared/ui/Button';
 import { Icon } from '@/shared/ui/Icon';
 import {
-  type AppIcon,
   ArrowRightIcon,
   CheckIcon,
   ChevronDownIcon,
   CircleQuestionMarkIcon,
-  DoorOpenIcon,
   EyeIcon,
   EyeOffIcon,
   FingerprintPatternIcon,
   GlobeIcon,
   LockIcon,
-  PackageIcon,
   ScanFaceIcon,
   ServerIcon,
   ShieldCheckIcon,
   UserIcon,
-  UsersIcon,
 } from '@/shared/ui/icons';
 import { onBlue, useHeaderColors } from '@/shared/ui/ScreenShell';
 import { SelectSheet } from '@/shared/ui/SelectSheet';
@@ -57,6 +53,9 @@ const lastDomain = () => {
   const last = kv.getString(kvKeys.lastDomain);
   return loginDomains.find((value) => value === last) ?? loginDomains[0];
 };
+
+/** Member companies of the THACO group on the header: proper names, the same in every language. */
+const groupCompanies = ['THILOGI', 'THACO INDUSTRIES', 'THACO AUTO', 'THACO AGRI', 'THISO', 'ĐẠI QUANG MINH'] as const;
 
 /** Đăng nhập (6a): blue header with the portal title, a white form card over it, a security note and the footer. */
 export function LoginScreen() {
@@ -235,9 +234,9 @@ export function LoginScreen() {
             {t('auth.headline')}
           </Text>
           <View className="mt-4 flex-row flex-wrap gap-2">
-            <HeaderChip icon={DoorOpenIcon} label={t('auth.chips.rooms')} />
-            <HeaderChip icon={PackageIcon} label={t('auth.chips.parcels')} />
-            <HeaderChip icon={UsersIcon} label={t('auth.chips.hr')} />
+            {groupCompanies.map((name) => (
+              <CompanyChip key={name} name={name} />
+            ))}
           </View>
         </View>
 
@@ -391,14 +390,14 @@ export function LoginScreen() {
         </View>
 
         {/* Security note */}
-        <View className="mx-4 mt-3 flex-row items-start gap-3 rounded-[16px] bg-elevated p-3">
+       {/*  <View className="mx-4 mt-3 flex-row items-start gap-3 rounded-[16px] bg-elevated p-3">
           <View className="h-8 w-8 items-center justify-center rounded-[9px] bg-success-tint">
             <Icon icon={ShieldCheckIcon} size={16} color="success" />
           </View>
           <Text className="flex-1 text-ink-2" style={{ fontSize: 12.5, lineHeight: 18 }}>
             {t('auth.securityNote')}
           </Text>
-        </View>
+        </View> */}
 
         {/* Footer */}
         <View className="mt-auto flex-row items-center justify-between px-5 pt-8">
@@ -428,14 +427,12 @@ export function LoginScreen() {
   );
 }
 
-/** Module chip on the header: Phòng họp · Bưu phẩm · Nhân sự. */
-function HeaderChip({ icon, label }: { icon: AppIcon; label: string }) {
-  const { soft } = useHeaderColors();
+/** Company name on the header: plain uppercase on a faint white pill. */
+function CompanyChip({ name }: { name: string }) {
   return (
-    <View className="h-[30px] flex-row items-center gap-1.5 rounded-[10px] px-2.5" style={{ backgroundColor: onBlue(0.08), borderWidth: 1, borderColor: onBlue(0.18) }}>
-      <Icon icon={icon} size={13} rawColor={soft} />
-      <Text weight="semibold" style={{ fontSize: 12, lineHeight: 15, color: soft }}>
-        {label}
+    <View className="h-[26px] justify-center rounded-full px-3" style={{ backgroundColor: onBlue(0.1), borderWidth: 1, borderColor: onBlue(0.14) }}>
+      <Text weight="bold" numberOfLines={1} maxFontSizeMultiplier={1.2} style={{ fontSize: 11, lineHeight: 14, letterSpacing: 0.6, color: onBlue(0.92) }}>
+        {name}
       </Text>
     </View>
   );

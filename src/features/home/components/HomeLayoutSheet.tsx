@@ -1,14 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
-import { useTheme } from '@/core/theme/ThemeProvider';
+import { type SchemePreference, useTheme } from '@/core/theme/ThemeProvider';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { Icon } from '@/shared/ui/Icon';
 import { CheckIcon, LayoutGridIcon } from '@/shared/ui/icons';
 import { SwitchRow } from '@/shared/ui/SwitchRow';
 import { Text } from '@/shared/ui/Text';
+import { ThemeModeToggle } from '@/shared/ui/ThemeModeToggle';
 
 import { useAvailableModules } from '../hooks/useModules';
 import { type HomeLayout, homeLayouts, useEffectiveHomePrefs, useHomePrefs } from '../store/homePrefs';
@@ -20,6 +21,7 @@ type Props = { visible: boolean; onClose: () => void; /** "Sắp xếp tiện í
  * "Giao diện trang chủ" (2h). Choices are kept as a draft that the home screen previews behind the
  * sheet; "Áp dụng" saves them, closing any other way discards them. A switch shows only when the granted apps
  * give it something to show: "Cần xử lý" needs Duyệt or Bưu phẩm, the next meeting needs the room service.
+ * The light / dark choice previews on the whole app at once and goes back the same way unless applied.
  */
 export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
   const { t } = useTranslation();
@@ -31,6 +33,9 @@ export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
   const modules = useAvailableModules();
   const todoAvailable = useVisibleTodos(modules).length > 0;
   const meetingAvailable = modules.some((m) => m.permission?.service === 'room');
+  const { preference, setPreference } = useTheme();
+  // The scheme before the first change in this sheet, restored when it closes without "Áp dụng".
+  const themeBefore = useRef<SchemePreference | null>(null);
 
   useEffect(() => {
     if (!visible) return;
@@ -39,14 +44,25 @@ export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
     return discardDraft;
   }, [visible, startDraft, discardDraft]);
 
+  const previewTheme = (next: SchemePreference) => {
+    themeBefore.current ??= preference;
+    setPreference(next);
+  };
+
+  const dismiss = () => {
+    if (themeBefore.current !== null) setPreference(themeBefore.current);
+    themeBefore.current = null;
+    onClose();
+  };
+
   const apply = () => {
     applyDraft();
+    themeBefore.current = null;
     onClose();
   };
 
   const sort = () => {
-    applyDraft();
-    onClose();
+    apply();
     onSort?.();
   };
 
@@ -54,7 +70,7 @@ export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
     <BottomSheet
       testID="home-layout-sheet"
       visible={visible}
-      onClose={onClose}
+      onClose={dismiss}
       icon={LayoutGridIcon}
       iconTone="brand"
       title={t('home.layoutSheet.title')}
@@ -70,6 +86,12 @@ export function HomeLayoutSheet({ visible, onClose, onSort }: Props) {
         {homeLayouts.map((option) => (
           <LayoutOption key={option} layout={option} selected={option === layout} onPress={() => updateDraft({ layout: option })} />
         ))}
+      </View>
+      <View className="gap-2">
+        <Text weight="semibold" style={{ fontSize: 14, lineHeight: 19 }}>
+          {t('appearance.title')}
+        </Text>
+        <ThemeModeToggle testID="home-layout-theme" value={preference} onChange={previewTheme} />
       </View>
       <View>
         {todoAvailable ? (
