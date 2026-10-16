@@ -86,16 +86,21 @@ export function ModuleScreen({ header, floating, children, footer, footerNote, b
           <ScrollView
             ref={scrollRef}
             keyboardShouldPersistTaps="handled"
-            refreshControl={refreshControl}
+            // Overlap: as with `floatingScrolls`, the scroll view itself is header blue so pulling down stretches
+            // the band (light spinner) instead of dragging it away from the header; the content keeps the canvas.
+            refreshControl={overlap && isValidElement(refreshControl) ? cloneElement(refreshControl, { tintColor: colors['header-name'] }) : refreshControl}
+            style={overlap ? { backgroundColor: colors.header } : undefined}
             contentContainerStyle={{
               paddingHorizontal: CONTENT_PADDING.horizontal,
               paddingTop: overlap ? 0 : CONTENT_PADDING.top,
               paddingBottom: CONTENT_PADDING.bottom,
               gap: CONTENT_PADDING.gap,
+              ...(overlap ? { flexGrow: 1, backgroundColor: bg } : null),
             }}
           >
             {overlap ? <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 26, backgroundColor: colors.header }} /> : null}
             {children}
+            {overlap ? <View pointerEvents="none" style={{ position: 'absolute', top: '100%', left: 0, right: 0, height: 800, backgroundColor: bg }} /> : null}
           </ScrollView>
         ) : (
           children

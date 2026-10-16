@@ -6,6 +6,7 @@ import { useCapabilities } from '@/core/session/capabilities';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { sameId } from '@/core/session/userTypes';
 import { addDays, atMinutes, formatKey, minutesOfDay, todayKey, type DateKey } from '@/core/time/vn';
+import { useDocumentSummary } from '@/features/official-document/hooks/useDocumentSummary';
 import { parcelsApi } from '@/features/parcel/api/parcel.api';
 import { useMyParcelStats } from '@/features/parcel/hooks/useMyParcelStats';
 import { useReceptionStats } from '@/features/parcel/hooks/useReceptionStats';
@@ -189,4 +190,50 @@ export function useTodoItems(): Record<TodoKind, TodoItem> {
   return {
     parcels: { kind: 'parcels', count: parcelCount, sub: parcelSub, isLoading: stats.isLoading },
   };
+}
+
+// ── Văn thư ─────────────────────────────────────────────────────────────────
+
+/** The portal grants the Văn thư app (`VANTHU`): only then do its counters load. */
+function useDocumentsGranted() {
+  return useSessionStore((s) => !!s.apps?.some((app) => app.code === 'VANTHU'));
+}
+
+/** Documents waiting for me: to distribute plus to process (chủ trì / phối hợp). */
+export function useDocumentsPending(): Signal<number> {
+  const { summary, isLoading } = useDocumentSummary(useDocumentsGranted());
+  return { data: summary?.pending, isLoading };
+}
+
+/** "N chờ xử lý · N quá hạn" for the "Thẻ" layout. */
+export function useDocumentsSummary(): Signal<string> {
+  const { t } = useTranslation();
+  const { summary, isLoading } = useDocumentSummary(useDocumentsGranted());
+  if (!summary) return { data: undefined, isLoading };
+  if (!summary.pending) return { data: t('home.summary.documentsNone'), isLoading: false };
+  const parts = [t('home.summary.documentsPending', { count: summary.pending }), summary.overdue ? t('home.summary.documentsOverdue', { count: summary.overdue }) : null];
+  return { data: parts.filter(Boolean).join(' · '), isLoading: false };
+}
+
+/** Văn bản đến tile: "N phân phối · N xử lý". */
+export function useIncomingDocsSummary(): Signal<string> {
+  const { t } = useTranslation();
+  const { summary, isLoading } = useDocumentSummary(useDocumentsGranted());
+  if (!summary) return { data: undefined, isLoading };
+  if (!summary.toHandle) return { data: t('home.summary.incomingNone'), isLoading: false };
+  return { data: t('home.summary.incomingPending', { distribute: summary.toDistribute, process: summary.toProcess }), isLoading: false };
+}
+
+/** Shared documents I have not opened yet. */
+export function useSharedDocsUnread(): Signal<number> {
+  const { summary, isLoading } = useDocumentSummary(useDocumentsGranted());
+  return { data: summary?.unreadShared, isLoading };
+}
+
+/** Văn bản chia sẻ tile: "N chưa xem" or "Đã xem hết". */
+export function useSharedDocsSummary(): Signal<string> {
+  const { t } = useTranslation();
+  const { summary, isLoading } = useDocumentSummary(useDocumentsGranted());
+  if (!summary) return { data: undefined, isLoading };
+  return { data: summary.unreadShared ? t('home.summary.sharedUnread', { count: summary.unreadShared }) : t('home.summary.sharedNone'), isLoading: false };
 }

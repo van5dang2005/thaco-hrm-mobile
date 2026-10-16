@@ -26,7 +26,7 @@ export type LayoutProps = {
 };
 
 /**
- * Icon box / glyph / deep text colors per group: meeting blue, parcel green (v3), guest amber. Web apps bring their own logo,
+ * Icon box / glyph / deep text colors per group: meeting blue, parcel green (v3), guest amber, document violet. Web apps bring their own logo,
  * mostly on white: a white box with a hairline frames it instead of a tint around a white patch.
  */
 export function useGroupTone(group: ModuleGroup) {
@@ -39,6 +39,8 @@ export function useGroupTone(group: ModuleGroup) {
       return { box: tinted(colors['success-tint']), icon: scheme === 'dark' ? colors['success-text'] : colors.success, bar: colors.success };
     case 'guest':
       return { box: tinted(colors['warning-tint']), icon: scheme === 'dark' ? colors['warning-text'] : colors.warning, bar: colors.warning };
+    case 'document':
+      return { box: tinted(colors['document-tint']), icon: colors.document, bar: colors.document };
     case 'other':
       return { box: { backgroundColor: colors.elevated, borderWidth: 1, borderColor: colors.line }, icon: colors['ink-2'], bar: colors.subtle };
   }

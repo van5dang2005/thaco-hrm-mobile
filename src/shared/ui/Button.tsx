@@ -15,7 +15,7 @@ import { Text } from './Text';
  * text; `danger` is the same) · danger-soft (#FBE7E5 fill, red text, no outline) · ghost (white, grey outline) · soft (#EEF3F9, primary text) ·
  * neutral (#F4F7FB, ink text) · link (text only, trailing ›) · inverse / inverse-soft (on dark or blue surfaces).
  */
-export type ButtonVariant = 'primary' | 'success' | 'danger-outline' | 'danger' | 'danger-soft' | 'ghost' | 'neutral' | 'soft' | 'link' | 'inverse' | 'inverse-soft';
+export type ButtonVariant = 'primary' | 'success' | 'danger-outline' | 'danger' | 'danger-soft' | 'danger-solid' | 'ghost' | 'neutral' | 'soft' | 'link' | 'inverse' | 'inverse-soft';
 
 /** `xl` 56 / radius 14 (main CTA) · `lg` 52 / radius 14 (footers, forms) · `md` 44 / radius 12 (inside cards) · `sm` 40 · `xs` 34 pill. */
 export type ButtonSize = 'xl' | 'lg' | 'md' | 'sm' | 'xs';
@@ -39,6 +39,8 @@ const variants: Record<ButtonVariant, { box: string; fg: ColorToken | 'white'; s
   'danger-outline': { box: 'border-[1.5px] border-danger-border bg-elevated', fg: 'danger' },
   danger: { box: 'border-[1.5px] border-danger-border bg-elevated', fg: 'danger' },
   'danger-soft': { box: 'bg-danger-tint', fg: 'danger-text' },
+  /** Destructive confirm that must stand out ("Trả lại văn bản"). */
+  'danger-solid': { box: 'bg-danger', fg: 'white' },
   ghost: { box: 'border border-input-border bg-elevated', fg: 'ink' },
   neutral: { box: 'bg-panel', fg: 'ink' },
   soft: { box: 'bg-icon-ring', fg: 'primary-tint-text' },

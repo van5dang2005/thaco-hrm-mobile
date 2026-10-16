@@ -45,4 +45,14 @@ export const qk = {
     root: ['guests'] as const,
     visit: (qr: string) => ['guests', 'visit', qr] as const,
   },
+  documents: {
+    root: ['documents'] as const,
+    me: ['documents', 'me'] as const,
+    people: ['documents', 'people'] as const,
+    incoming: ['documents', 'incoming'] as const,
+    incomingDetail: (id: string) => ['documents', 'incoming', 'detail', id] as const,
+    shared: ['documents', 'shared'] as const,
+    sharedDetail: (id: string) => ['documents', 'shared', 'detail', id] as const,
+    stampQueue: ['documents', 'stamp'] as const,
+  },
 };

@@ -80,7 +80,10 @@
     "warn-box": "#FFF6E6",
     "approved-tint": "#EAF6EF",
     "tab-inactive": "#7A8BA3",
-    "stepper-done": "#2E7BC4"
+    "stepper-done": "#2E7BC4",
+    "document-tint": "#F0EBFA",
+    "document": "#6B46C1",
+    "document-text": "#55349E"
   },
   "dark": {
     "primary": "#5AA2E6",
@@ -163,6 +166,9 @@
     "warn-box": "#3A2A10",
     "approved-tint": "#123327",
     "tab-inactive": "#8C9DB3",
-    "stepper-done": "#2E7BC4"
+    "stepper-done": "#2E7BC4",
+    "document-tint": "#2A2147",
+    "document": "#A78BFA",
+    "document-text": "#C4B5FD"
   }
 }

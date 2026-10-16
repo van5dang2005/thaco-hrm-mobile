@@ -9,22 +9,30 @@ import {
   CalendarCheckIcon,
   CalendarDaysIcon,
   ChartGanttIcon,
+  FileDownIcon,
   InboxIcon,
   PackageIcon,
   ScanQrCodeIcon,
+  ScrollTextIcon,
+  Share2Icon,
 } from '@/shared/ui/icons';
 
 import {
   type Signal,
+  useDocumentsPending,
+  useDocumentsSummary,
   useFreeRoomsSummary,
+  useIncomingDocsSummary,
   useMeetingsTodaySummary,
   useParcelSummary,
   useReceptionSummary,
+  useSharedDocsSummary,
+  useSharedDocsUnread,
   useWaitingParcels,
 } from './hooks/useSignals';
 
 /** "Theo nhóm" card and icon tone: one per app with screens here, `other` for the apps that open on the web. */
-export type ModuleGroup = 'meeting' | 'parcel' | 'guest' | 'other';
+export type ModuleGroup = 'meeting' | 'parcel' | 'guest' | 'document' | 'other';
 
 /** Key under `home.modules` in the locale files. */
 export type ModuleLabelKey = keyof (typeof vi)['home']['modules'];
@@ -146,5 +154,37 @@ export const nativeModules: readonly HomeModule[] = [
     icon: ScanQrCodeIcon,
     route: '/guests/scan',
     permission: { app: 'GUEST_SCHEDULE_MANAGEMENT_WEB' },
+  },
+  {
+    id: 'official-documents',
+    group: 'document',
+    labelKey: 'officialDocuments',
+    icon: ScrollTextIcon,
+    route: '/documents',
+    // Screens run on mock data until the app talks to thaco_be_ql_van_thu (see VANTHU_MOBILE.md).
+    permission: { app: 'VANTHU' },
+    badge: useDocumentsPending,
+    summary: useDocumentsSummary,
+    urgentWhenBadged: true,
+  },
+  {
+    // Shortcut into Văn thư; the Văn thư tile already carries the "chờ phân phối + chờ xử lý" count, so no badge here.
+    id: 'incoming-documents',
+    group: 'document',
+    labelKey: 'incomingDocuments',
+    icon: FileDownIcon,
+    route: '/documents/incoming',
+    permission: { app: 'VANTHU' },
+    summary: useIncomingDocsSummary,
+  },
+  {
+    id: 'shared-documents',
+    group: 'document',
+    labelKey: 'sharedDocuments',
+    icon: Share2Icon,
+    route: '/documents/shared',
+    permission: { app: 'VANTHU' },
+    badge: useSharedDocsUnread,
+    summary: useSharedDocsSummary,
   },
 ];
