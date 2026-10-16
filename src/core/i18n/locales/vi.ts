@@ -474,7 +474,7 @@ const vi = {
     incoming: {
       title: 'Văn bản đến',
       subtitle: 'Theo ngày nhận · 30 ngày qua',
-      tab: { phan_phoi: 'Phân phối', xu_ly: 'Xử lý', da_xu_ly: 'Đã xử lý' },
+      tab: { phan_phoi: 'Chờ phân phối', xu_ly: 'Đang xử lý', da_xu_ly: 'Đã xử lý' },
       empty: {
         phan_phoi: 'Không có văn bản chờ bạn phân phối',
         xu_ly: 'Không có văn bản cần xử lý',

@@ -5,7 +5,7 @@ import { RefreshControl, SectionList, View } from 'react-native';
 
 import { todayKey } from '@/core/time/vn';
 import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
-import { HeaderSegmented } from '@/shared/ui/HeaderSegmented';
+import { HeaderTabs } from '@/shared/ui/HeaderTabs';
 import { FileTextIcon, Share2Icon } from '@/shared/ui/icons';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { CONTENT_PADDING, ModuleScreen } from '@/shared/ui/ModuleScreen';
@@ -13,7 +13,7 @@ import { GroupTitle } from '@/shared/ui/SectionTitle';
 import { ListSkeleton } from '@/shared/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/shared/ui/StateViews';
 
-import { HeaderChips } from '../components/HeaderChips';
+import { ListChips } from '../components/ListChips';
 import { SharedDocRow } from '../components/SharedDocRow';
 import { useSharedDocs } from '../hooks/useSharedDocs';
 import type { SharedKind } from '../types';
@@ -35,33 +35,29 @@ export function SharedListScreen() {
   const groups = groupShared(ofKind.filter((d) => matchesSharedFilter(d, filter)), todayKey());
 
   const header = (
-    <ModuleHeader testID="shared-header" icon={Share2Icon} title={t('documents.shared.title')} subtitle={t('documents.shared.subtitle')} bottom={18}>
-      <HeaderSegmented<SharedKind>
+    <ModuleHeader testID="shared-header" icon={Share2Icon} title={t('documents.shared.title')} subtitle={t('documents.shared.subtitle')} bottom={0}>
+      <HeaderTabs<SharedKind>
         testID="shared-kind"
-        className=""
         options={(['di', 'noi_bo'] as const).map((key) => ({
           value: key,
           label: t(`documents.shared.kind.${key}`),
-          badge: query.data ? docs.filter((d) => d.kind === key).length : undefined,
-          badgeTone: 'neutral' as const,
+          count: query.data ? docs.filter((d) => d.kind === key).length : undefined,
           testID: `shared-kind-${key}`,
         }))}
         value={kind}
         onChange={setKind}
       />
-      <View className="mt-3">
-        <HeaderChips<SharedFilter>
-          testID="shared-filters"
-          options={SHARED_FILTERS.map((key) => ({ value: key, label: t(`documents.shared.filter.${key}`), count: query.data ? counts[key] : undefined, testID: `shared-filter-${key}` }))}
-          value={filter}
-          onChange={setFilter}
-        />
-      </View>
     </ModuleHeader>
   );
 
   return (
     <ModuleScreen header={header} scroll={false}>
+      <ListChips<SharedFilter>
+        testID="shared-filters"
+        options={SHARED_FILTERS.map((key) => ({ value: key, label: t(`documents.shared.filter.${key}`), count: query.data ? counts[key] : undefined, testID: `shared-filter-${key}` }))}
+        value={filter}
+        onChange={setFilter}
+      />
       {query.isLoading ? (
         <View className="p-4">
           <ListSkeleton count={3} lines={3} />

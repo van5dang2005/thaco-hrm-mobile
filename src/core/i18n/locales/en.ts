@@ -473,7 +473,7 @@ const en: Translation = {
     incoming: {
       title: 'Incoming documents',
       subtitle: 'By date received · last 30 days',
-      tab: { phan_phoi: 'Distribute', xu_ly: 'Process', da_xu_ly: 'Processed' },
+      tab: { phan_phoi: 'To distribute', xu_ly: 'In progress', da_xu_ly: 'Processed' },
       empty: {
         phan_phoi: 'Nothing waiting for you to distribute',
         xu_ly: 'Nothing to process',

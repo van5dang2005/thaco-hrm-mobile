@@ -9,7 +9,7 @@ import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { FilterChip } from '@/shared/ui/Chip';
 import { HeaderIconButton } from '@/shared/ui/HeaderBar';
-import { HeaderSegmented } from '@/shared/ui/HeaderSegmented';
+import { HeaderTabs } from '@/shared/ui/HeaderTabs';
 import { CheckCheckIcon, InboxIcon, SearchIcon, SlidersHorizontalIcon, UserCheckIcon, XIcon } from '@/shared/ui/icons';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { CONTENT_PADDING, ModuleScreen } from '@/shared/ui/ModuleScreen';
@@ -20,8 +20,8 @@ import { TextField } from '@/shared/ui/TextField';
 import { IncomingDocCard } from '../components/IncomingDocCard';
 import { useIncomingDocs } from '../hooks/useIncomingDocs';
 import type { IncomingDoc } from '../types';
+import { INCOMING_TABS, incomingCounts, inIncomingTab, isIncomingTab, needsDistribution, sortIncoming, type IncomingTab } from '../utils/incoming';
 import { matchesQuery } from '../utils/text';
-import { incomingCounts, inIncomingTab, isIncomingTab, needsDistribution, sortIncoming, type IncomingTab } from '../utils/incoming';
 
 /** History older than this is left to the web app. */
 const HISTORY_DAYS = 30;
@@ -73,16 +73,16 @@ export function IncomingListScreen() {
           <HeaderIconButton testID="incoming-filter" icon={SlidersHorizontalIcon} label={t('documents.filter')} onPress={() => setFilterOpen(true)} badge={filtered ? Number(filters.urgent) + Number(filters.unread) : undefined} />
         </>
       }
-      bottom={18}
+      bottom={0}
     >
-      <HeaderSegmented<IncomingTab>
+      <HeaderTabs<IncomingTab>
         testID="incoming-tabs"
-        className=""
-        options={(['phan_phoi', 'xu_ly', 'da_xu_ly'] as const).map((key) => ({
+        options={INCOMING_TABS.map((key) => ({
           value: key,
           label: t(`documents.incoming.tab.${key}`),
-          badge: docs.data ? counts[key] : undefined,
-          badgeTone: key === 'phan_phoi' && counts.phan_phoi ? 'danger' : 'neutral',
+          count: docs.data ? counts[key] : undefined,
+          // Red count: documents wait for me to distribute.
+          attention: key === 'phan_phoi',
           testID: `incoming-tab-${key}`,
         }))}
         value={tab}
