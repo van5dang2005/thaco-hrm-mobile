@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useRoomMe } from '@/core/session/useMe';
 import { sameId } from '@/core/session/userTypes';
@@ -14,7 +15,19 @@ import { Card, FloatingCard } from '@/shared/ui/Card';
 import { DatePickerSheet } from '@/shared/ui/DatePickerSheet';
 import { HeaderIconButton } from '@/shared/ui/HeaderBar';
 import { Icon } from '@/shared/ui/Icon';
-import { ArrowRightIcon, ChartGanttIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, DoorOpenIcon, HourglassIcon, MapPinIcon, SearchIcon, SlidersHorizontalIcon } from '@/shared/ui/icons';
+import {
+  ArrowRightIcon,
+  ChartGanttIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  DoorOpenIcon,
+  HourglassIcon,
+  PlusIcon,
+  SearchIcon,
+  SlidersHorizontalIcon,
+} from '@/shared/ui/icons';
 import { HeaderSearch } from '@/shared/ui/HeaderSearch';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { ModuleScreen } from '@/shared/ui/ModuleScreen';
@@ -48,12 +61,16 @@ type Mode = 'day' | 'week';
 /** Durations offered by the quick-book chip, in minutes. */
 const DURATIONS = [30, 60, 90, 120];
 
+/** Space under the last hour (or day) so it scrolls clear of the floating "Đặt phòng" button. */
+const FAB_CLEARANCE = 84;
+
 /** 3a: rooms × hours for one day (or the week as an agenda). Tap an empty slot to book it. */
 export function RoomCalendarScreen() {
   const { t } = useTranslation();
   const params = useLocalSearchParams<{ date?: string }>();
   const me = useRoomMe();
   const now = useNow();
+  const insets = useSafeAreaInsets();
   const defaultAreaId = useDefaultAreaId();
   const [areaChoice, setAreaChoice] = useState<string | undefined>();
   const areaId = areaChoice ?? defaultAreaId;
@@ -196,13 +213,20 @@ export function RoomCalendarScreen() {
     router.push('/rooms/book/details');
   };
 
+  /** Book without a slot: the wizard opens at B1 in this area, on the shown day when it is a later one. */
+  const book = () => {
+    const draft = defaultDraft();
+    const later = dateKey > draft.dateKey ? { dateKey, untilKey: addDays(dateKey, 28), startMin: 8 * 60, endMin: 9 * 60 } : null;
+    startDraft({ ...draft, ...later, areaId });
+    router.push('/rooms/book');
+  };
+
   const header = (
     <ModuleHeader
       testID="rooms-header"
       icon={ChartGanttIcon}
-      title={t('rooms.calendarTitle')}
+      // No title: the area picker stands in for it (the Gantt chip already says "room schedule").
       subtitle={area.name}
-      subtitleIcon={MapPinIcon}
       onSubtitlePress={area.open}
       right={
         <>
@@ -270,6 +294,15 @@ export function RoomCalendarScreen() {
       </>
     ) : undefined;
 
+  // Floats over the schedule instead of taking a bar from it; the selected slot's bar replaces it.
+  const bottomEdge = Math.max(insets.bottom, 12);
+  const fab = selection ? null : (
+    // Day: inside the schedule card's bottom-right corner. Week: over the agenda's bottom-right.
+    <View pointerEvents="box-none" className="absolute" style={{ right: mode === 'day' ? 28 : 16, bottom: bottomEdge + (mode === 'day' ? 14 : 4) }}>
+      <Button testID="rooms-book" pill size="md" className="h-12 pl-4 pr-5" icon={PlusIcon} label={t('rooms.book')} accessibilityHint={t('rooms.tapToBook')} onPress={book} />
+    </View>
+  );
+
   const body =
     rooms.isLoading ? (
       <Card className="gap-3 p-4">
@@ -297,16 +330,20 @@ export function RoomCalendarScreen() {
           blockTitle={(block) => visibleTitle(block.bookings[0])}
           onPressBlock={onPressBlock}
           onPressSlot={onPressSlot}
+          bottomInset={fab ? FAB_CLEARANCE : undefined}
         />
       </Card>
     );
 
   return (
-    <ModuleScreen header={header} floating={floating} footer={footer} scroll={false}>
+    <ModuleScreen header={header} floating={floating} footer={footer} overlay={fab} scroll={false}>
       {mode === 'week' ? (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 12, gap: 12 }}>{body}</ScrollView>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingTop: 12, paddingBottom: FAB_CLEARANCE + insets.bottom, gap: 12 }}>{body}</ScrollView>
       ) : (
-        <View className="flex-1 px-4 pb-3 pt-3">{body}</View>
+        // Without the selection bar the schedule runs to the bottom edge, clear of the home indicator.
+        <View className="flex-1 px-4 pt-3" style={{ paddingBottom: footer ? 12 : bottomEdge }}>
+          {body}
+        </View>
       )}
 
       {area.sheet}

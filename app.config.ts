@@ -79,6 +79,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     'expo-router',
+    // No floating dev tools button in development builds (the dev menu still opens with Cmd+D / Cmd+M or a shake).
+    ['expo-dev-client', { toolsButton: false }],
     [
       'expo-splash-screen',
       {

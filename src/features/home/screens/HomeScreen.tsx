@@ -14,6 +14,7 @@ import { refreshMyApps } from '@/core/session/session';
 import { useSessionStore } from '@/core/session/sessionStore';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { useTotalUnread } from '@/features/notification/hooks/useUnreadCount';
+import { defaultDraft, useBookingDraft } from '@/features/room-booking/store/draftStore';
 import { images, WORDMARK_RATIO } from '@/shared/assets';
 import { CountBadge } from '@/shared/ui/CountBadge';
 import { Icon } from '@/shared/ui/Icon';
@@ -39,6 +40,12 @@ const layoutComponents: Record<HomeLayout, ComponentType<LayoutProps>> = {
 
 const FADE_MS = 200;
 
+/** The hero card's "Đặt phòng": a fresh booking wizard (the home tile opens the room calendar instead). */
+function bookRoom() {
+  useBookingDraft.getState().start(defaultDraft());
+  router.push('/rooms/book');
+}
+
 /** Query groups behind the profile, badges and summaries (pull-to-refresh, with the granted apps). */
 const refreshKeys = [...services.map((service) => qk.me(service)), qk.notifications.root, qk.bookings.root, qk.rooms.root, qk.parcels.root];
 
@@ -58,7 +65,6 @@ export function HomeScreen() {
   const [orderSheet, setOrderSheet] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const dark = scheme === 'dark';
-  const bookRoom = modules.find((m) => m.id === 'book-room');
   const roomVisible = modules.some((m) => m.permission?.service === 'room');
 
   useFocusEffect(
@@ -104,7 +110,7 @@ export function HomeScreen() {
         contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 24, gap: 18 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.muted} colors={[colors.primary]} />}
       >
-        <HeroCard showNextMeeting={showNextMeeting && roomVisible} onBook={bookRoom ? () => open(bookRoom) : undefined} />
+        <HeroCard showNextMeeting={showNextMeeting && roomVisible} onBook={roomVisible ? () => bookRoom() : undefined} />
         {modules.length ? (
           <Animated.View key={layout} entering={FadeIn.duration(FADE_MS)}>
             <Layout modules={modules} signals={signals} onOpen={open} showTodo={showTodo} onCustomize={() => setOrderSheet(true)} />

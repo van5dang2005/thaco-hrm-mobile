@@ -5,12 +5,26 @@ import { Pressable, RefreshControl, View } from 'react-native';
 import { useTheme } from '@/core/theme/ThemeProvider';
 import { formatKey, todayKey, weekdayOf } from '@/core/time/vn';
 import { usePullRefresh } from '@/shared/hooks/usePullRefresh';
-import { PressableCard } from '@/shared/ui/Card';
+import { Card, Divider, PressableCard } from '@/shared/ui/Card';
+import { CountBadge } from '@/shared/ui/CountBadge';
 import { HeaderIconButton } from '@/shared/ui/HeaderBar';
 import { Icon } from '@/shared/ui/Icon';
-import { type AppIcon, ChevronRightIcon, ClipboardListIcon, ClockAlertIcon, MailIcon, ScrollTextIcon, SearchIcon, StampIcon, UserCheckIcon } from '@/shared/ui/icons';
+import {
+  type AppIcon,
+  ChevronRightIcon,
+  ClipboardListIcon,
+  ClockAlertIcon,
+  FileDownIcon,
+  MailIcon,
+  ScrollTextIcon,
+  SearchIcon,
+  Share2Icon,
+  StampIcon,
+  UserCheckIcon,
+} from '@/shared/ui/icons';
 import { ModuleHeader } from '@/shared/ui/ModuleHeader';
 import { ModuleScreen } from '@/shared/ui/ModuleScreen';
+import { RoundIcon } from '@/shared/ui/RoundIcon';
 import { useHeaderColors } from '@/shared/ui/ScreenShell';
 import { SectionTitle } from '@/shared/ui/SectionTitle';
 import { CardSkeleton } from '@/shared/ui/Skeleton';
@@ -26,7 +40,7 @@ import { byUrgency, tasksOf, tasksOnDay } from '../utils/tasks';
 
 const TODAY_TASKS = 3;
 
-/** Văn thư home (8a): how much waits for me, four counters that open the matching list, today's tasks. */
+/** Văn thư home (8a): how much waits for me, four counters that open the matching list, the incoming and shared lists, today's tasks. */
 export function DocumentsHomeScreen() {
   const { t } = useTranslation();
   const { fg, text2, text3 } = useHeaderColors();
@@ -123,6 +137,25 @@ export function DocumentsHomeScreen() {
             </View>
           </View>
 
+          <Card testID="documents-links">
+            <LinkRow
+              testID="documents-link-incoming"
+              icon={FileDownIcon}
+              label={t('documents.home.incoming')}
+              hint={summary ? (summary.toHandle ? t('documents.home.incomingHint', { distribute: summary.toDistribute, process: summary.toProcess }) : t('documents.home.incomingNone')) : undefined}
+              onPress={() => router.push('/documents/incoming')}
+            />
+            <Divider inset={64} />
+            <LinkRow
+              testID="documents-link-shared"
+              icon={Share2Icon}
+              label={t('documents.home.shared')}
+              hint={summary ? (summary.unreadShared ? t('documents.home.sharedUnread', { count: summary.unreadShared }) : t('documents.home.sharedNone')) : undefined}
+              badge={summary?.unreadShared}
+              onPress={() => router.push('/documents/shared')}
+            />
+          </Card>
+
           <SectionTitle
             className="mt-2"
             right={
@@ -155,10 +188,40 @@ export function DocumentsHomeScreen() {
           ) : (
             <EmptyState testID="documents-today-empty" icon={UserCheckIcon} message={t('documents.home.todayEmpty')} />
           )}
-
         </>
       )}
     </ModuleScreen>
+  );
+}
+
+type LinkRowProps = {
+  icon: AppIcon;
+  label: string;
+  hint?: string;
+  /** Red count before the chevron (unread shared documents). */
+  badge?: number;
+  onPress: () => void;
+  testID?: string;
+};
+
+/** A row of the list-links card: icon, label, one-line status, optional count, chevron. */
+function LinkRow({ icon, label, hint, badge, onPress, testID }: LinkRowProps) {
+  return (
+    <Pressable testID={testID} accessibilityRole="link" accessibilityLabel={`${label}. ${hint ?? ''}`} onPress={onPress} className="flex-row items-center gap-3 px-3.5 py-3 active:opacity-70">
+      <RoundIcon icon={icon} size={38} />
+      <View className="flex-1 gap-0.5">
+        <Text weight="semibold" numberOfLines={1} className="text-ink" style={{ fontSize: 15, lineHeight: 20 }}>
+          {label}
+        </Text>
+        {hint ? (
+          <Text numberOfLines={1} className="text-muted" style={{ fontSize: 12, lineHeight: 16 }}>
+            {hint}
+          </Text>
+        ) : null}
+      </View>
+      {badge ? <CountBadge count={badge} /> : null}
+      <Icon icon={ChevronRightIcon} size={18} color="subtle" />
+    </Pressable>
   );
 }
 

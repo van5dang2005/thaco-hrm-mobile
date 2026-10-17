@@ -1,8 +1,9 @@
 import { isApiError } from '@/core/api/ApiError';
 import { guestScheduleApi } from '@/core/api/clients';
 
-import { type GuestCheckIn, type GuestCheckInInput, GuestError, type GuestScheduleDto, type GuestVisit } from '../types';
+import { type GuestCheckIn, type GuestCheckInInput, type GuestDashboard, GuestError, type GuestScheduleDto, type GuestVisit } from '../types';
 import { qrCodeOf, toVisit } from '../utils/visit';
+import { dashboardSeed } from './mock';
 
 /** Mobile endpoints of the guest-schedule back-end, keyed by the code a guest QR holds. */
 const qrPath = (qrCode: string) => `/api/GuestSchedules/mobile/qr/${encodeURIComponent(qrCode)}`;
@@ -21,6 +22,12 @@ function asGuestError(error: unknown, step: 'lookup' | 'checkIn'): unknown {
 }
 
 export const guestApi = {
+  /** "Quản lý lịch khách" dashboard. No endpoint yet: hard-coded data (`mock.ts`) with a short delay so loading shows. */
+  async dashboard(): Promise<GuestDashboard> {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    return dashboardSeed();
+  },
+
   /** The visit a scanned QR points to: `GET …/mobile/qr/{code}`. */
   async lookup(qr: string): Promise<GuestVisit> {
     const qrCode = qrCodeOf(qr);

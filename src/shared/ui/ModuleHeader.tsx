@@ -3,16 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { cn } from '@/shared/lib/cn';
 import { goBack } from '@/shared/lib/navigation';
 
 import { HeaderIconButton, HeaderTitleIcon } from './HeaderBar';
 import { Icon } from './Icon';
 import { type AppIcon, ChevronDownIcon, ChevronLeftIcon, XIcon } from './icons';
-import { useHeaderColors, useLightStatusBar } from './ScreenShell';
+import { onBlue, useHeaderColors, useLightStatusBar } from './ScreenShell';
 import { Text } from './Text';
 
 type Props = {
-  title: string;
+  /** Left out when the subtitle picker says enough (Lịch phòng: the area); the picker then takes the toolbar's height. */
+  title?: string;
   /** Glyph in a round chip before the title (what the screen is about). */
   icon?: AppIcon;
   /** Second line under the title (#C9DCEF): area, opening hours, a short summary. */
@@ -21,7 +23,7 @@ type Props = {
   subtitleMono?: boolean;
   /** Glyph before the subtitle (map pin for the area). */
   subtitleIcon?: AppIcon;
-  /** Makes the subtitle a picker (adds a chevron), e.g. change area. */
+  /** Makes the subtitle a picker: a translucent pill with a chevron, so it reads as a button (change area, unit). */
   onSubtitlePress?: () => void;
   /** `back` (default) / `close` show a 40×40 button before the title; `none` for tab roots. */
   leading?: 'back' | 'close' | 'none';
@@ -48,15 +50,35 @@ export function ModuleHeader({ title, icon, subtitle, subtitleMono, subtitleIcon
   useLightStatusBar();
   const large = titleSize === 'lg';
 
-  const subtitleRow = subtitle ? (
+  const subtitleRow = !subtitle ? null : onSubtitlePress ? (
+    <Pressable
+      testID={`${testID ?? 'header'}-subtitle`}
+      accessibilityRole="button"
+      hitSlop={6}
+      onPress={onSubtitlePress}
+      className={cn('flex-row items-center self-start rounded-full active:opacity-70', title ? 'mt-1 h-[26px] gap-1 pl-2 pr-1.5' : 'h-10 max-w-full gap-1 pl-3.5 pr-2.5')}
+      style={{ backgroundColor: onBlue(0.16) }}
+    >
+      {subtitleIcon ? <Icon icon={subtitleIcon} size={title ? 13 : 15} rawColor={fg} /> : null}
+      <Text
+        weight="semibold"
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.2}
+        className="flex-shrink"
+        style={{ fontSize: title ? 12.5 : 14, lineHeight: title ? 16 : 19, color: fg }}
+      >
+        {subtitle}
+      </Text>
+      <Icon icon={ChevronDownIcon} size={title ? 14 : 16} weight="bold" rawColor={fg} />
+    </Pressable>
+  ) : (
     <View className="flex-row items-center gap-1">
       {subtitleIcon ? <Icon icon={subtitleIcon} size={12} rawColor={sub} /> : null}
       <Text mono={subtitleMono} numberOfLines={1} className="flex-shrink" style={{ fontSize: 12, lineHeight: 16, color: sub }}>
         {subtitle}
       </Text>
-      {onSubtitlePress ? <Icon icon={ChevronDownIcon} size={13} weight="bold" rawColor={sub} /> : null}
     </View>
-  ) : null;
+  );
 
   return (
     <View testID={testID} className="overflow-hidden" style={{ backgroundColor: bg, paddingTop: insets.top + 10, paddingHorizontal: 16, paddingBottom: bottom }}>
@@ -72,21 +94,17 @@ export function ModuleHeader({ title, icon, subtitle, subtitleMono, subtitleIcon
         )}
         {icon ? <HeaderTitleIcon icon={icon} size={large ? 40 : 36} /> : null}
         <View className="min-w-0 flex-1">
-          <Text
-            weight="bold"
-            numberOfLines={1}
-            accessibilityRole="header"
-            style={{ fontSize: large ? 22 : 18, lineHeight: large ? 28 : 23, letterSpacing: large ? -0.4 : -0.2, color: fg }}
-          >
-            {title}
-          </Text>
-          {subtitleRow && onSubtitlePress ? (
-            <Pressable accessibilityRole="button" hitSlop={8} onPress={onSubtitlePress} className="self-start active:opacity-70">
-              {subtitleRow}
-            </Pressable>
-          ) : (
-            subtitleRow
-          )}
+          {title ? (
+            <Text
+              weight="bold"
+              numberOfLines={1}
+              accessibilityRole="header"
+              style={{ fontSize: large ? 22 : 18, lineHeight: large ? 28 : 23, letterSpacing: large ? -0.4 : -0.2, color: fg }}
+            >
+              {title}
+            </Text>
+          ) : null}
+          {subtitleRow}
         </View>
         {right ? <View className="flex-row items-center gap-2">{right}</View> : null}
       </View>

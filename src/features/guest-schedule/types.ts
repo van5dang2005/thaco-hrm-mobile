@@ -34,6 +34,31 @@ export type GuestVisit = {
   location?: string | null;
 };
 
+/** Where a visit stands on the dashboard: waiting for the host's confirmation, confirmed, inside, gone. */
+export type GuestVisitStatus = 'pending' | 'confirmed' | 'checkedIn' | 'checkedOut';
+
+/** A visit in the dashboard's "Lịch khách hôm nay" list. */
+export type GuestScheduleItem = {
+  id: string;
+  /** "Đoàn KIA Hàn Quốc". */
+  groupName: string;
+  /** The guests' company. */
+  company?: string | null;
+  /** Who receives them: the host unit or person. */
+  host?: string | null;
+  /** ISO, UTC. */
+  from: string;
+  to: string;
+  guestCount: number;
+  status: GuestVisitStatus;
+};
+
+/** "Quản lý lịch khách" dashboard: the counters and today's visits. */
+export type GuestDashboard = {
+  stats: { total: number; pending: number; confirmed: number };
+  today: GuestScheduleItem[];
+};
+
 /** A gate check-in (the guard confirms the group at the gate). */
 export type GuestCheckInInput = {
   /** ISO, UTC. */

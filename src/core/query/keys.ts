@@ -43,6 +43,7 @@ export const qk = {
   },
   guests: {
     root: ['guests'] as const,
+    dashboard: ['guests', 'dashboard'] as const,
     visit: (qr: string) => ['guests', 'visit', qr] as const,
   },
   documents: {

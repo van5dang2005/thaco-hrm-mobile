@@ -63,16 +63,6 @@ export function pickNextMeeting(bookings: BookingDto[] | undefined, now = new Da
   return { booking: next, live, later: upcoming.length - 1 };
 }
 
-export function useMeetingsTodaySummary(): Signal<string> {
-  const { t } = useTranslation();
-  const meetings = useTodayMeetings();
-  const count = meetings.data?.length;
-  return {
-    data: count === undefined ? undefined : count ? t('home.summary.meetingsToday', { count }) : t('home.summary.noMeetingsToday'),
-    isLoading: meetings.isLoading,
-  };
-}
-
 export type FreeRooms = { free: number; total: number; /** One entry per room of the area, in room order: true when free now. */ rooms: boolean[] };
 
 /** Rooms of my default area that are open and not taken right now. */
@@ -213,27 +203,4 @@ export function useDocumentsSummary(): Signal<string> {
   if (!summary.pending) return { data: t('home.summary.documentsNone'), isLoading: false };
   const parts = [t('home.summary.documentsPending', { count: summary.pending }), summary.overdue ? t('home.summary.documentsOverdue', { count: summary.overdue }) : null];
   return { data: parts.filter(Boolean).join(' · '), isLoading: false };
-}
-
-/** Văn bản đến tile: "N phân phối · N xử lý". */
-export function useIncomingDocsSummary(): Signal<string> {
-  const { t } = useTranslation();
-  const { summary, isLoading } = useDocumentSummary(useDocumentsGranted());
-  if (!summary) return { data: undefined, isLoading };
-  if (!summary.toHandle) return { data: t('home.summary.incomingNone'), isLoading: false };
-  return { data: t('home.summary.incomingPending', { distribute: summary.toDistribute, process: summary.toProcess }), isLoading: false };
-}
-
-/** Shared documents I have not opened yet. */
-export function useSharedDocsUnread(): Signal<number> {
-  const { summary, isLoading } = useDocumentSummary(useDocumentsGranted());
-  return { data: summary?.unreadShared, isLoading };
-}
-
-/** Văn bản chia sẻ tile: "N chưa xem" or "Đã xem hết". */
-export function useSharedDocsSummary(): Signal<string> {
-  const { t } = useTranslation();
-  const { summary, isLoading } = useDocumentSummary(useDocumentsGranted());
-  if (!summary) return { data: undefined, isLoading };
-  return { data: summary.unreadShared ? t('home.summary.sharedUnread', { count: summary.unreadShared }) : t('home.summary.sharedNone'), isLoading: false };
 }

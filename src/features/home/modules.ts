@@ -3,31 +3,15 @@ import type { Href } from 'expo-router';
 import type { ServiceId } from '@/core/api/ApiError';
 import type vi from '@/core/i18n/locales/vi';
 import type { Capability } from '@/core/session/capabilities';
-import { defaultDraft, useBookingDraft } from '@/features/room-booking/store/draftStore';
-import {
-  type AppIcon,
-  CalendarCheckIcon,
-  CalendarDaysIcon,
-  ChartGanttIcon,
-  FileDownIcon,
-  InboxIcon,
-  PackageIcon,
-  ScanQrCodeIcon,
-  ScrollTextIcon,
-  Share2Icon,
-} from '@/shared/ui/icons';
+import { type AppIcon, CalendarCheckIcon, InboxIcon, PackageIcon, ScrollTextIcon, UsersIcon } from '@/shared/ui/icons';
 
 import {
   type Signal,
   useDocumentsPending,
   useDocumentsSummary,
   useFreeRoomsSummary,
-  useIncomingDocsSummary,
-  useMeetingsTodaySummary,
   useParcelSummary,
   useReceptionSummary,
-  useSharedDocsSummary,
-  useSharedDocsUnread,
   useWaitingParcels,
 } from './hooks/useSignals';
 
@@ -98,30 +82,13 @@ export type HomeModule = ModuleLabel & {
  */
 export const nativeModules: readonly HomeModule[] = [
   {
+    // One tile for room booking: the room calendar books (quick book, tap a free slot) and opens bookings;
+    // "Lịch họp" is the Calendar tab. Keeps the old id so a saved tile order still places it.
     id: 'book-room',
     group: 'meeting',
     labelKey: 'bookRoom',
     shortLabelKey: 'bookRoomShort',
     icon: CalendarCheckIcon,
-    route: '/rooms/book',
-    onBeforeOpen: () => useBookingDraft.getState().start(defaultDraft()),
-    permission: { service: 'room' },
-    summary: useFreeRoomsSummary,
-  },
-  {
-    id: 'my-meetings',
-    group: 'meeting',
-    labelKey: 'myMeetings',
-    icon: CalendarDaysIcon,
-    route: '/calendar',
-    permission: { service: 'room' },
-    summary: useMeetingsTodaySummary,
-  },
-  {
-    id: 'room-calendar',
-    group: 'meeting',
-    labelKey: 'roomCalendar',
-    icon: ChartGanttIcon,
     route: '/rooms',
     permission: { service: 'room' },
     summary: useFreeRoomsSummary,
@@ -148,11 +115,13 @@ export const nativeModules: readonly HomeModule[] = [
     summary: useReceptionSummary,
   },
   {
+    // The dashboard opens the QR scanner ("Quét mã QR"). Keeps the old id so a saved tile order still places it.
     id: 'guest-scan',
     group: 'guest',
-    labelKey: 'guestScan',
-    icon: ScanQrCodeIcon,
-    route: '/guests/scan',
+    labelKey: 'guests',
+    shortLabelKey: 'guestsShort',
+    icon: UsersIcon,
+    route: '/guests',
     permission: { app: 'GUEST_SCHEDULE_MANAGEMENT_WEB' },
   },
   {
@@ -166,25 +135,5 @@ export const nativeModules: readonly HomeModule[] = [
     badge: useDocumentsPending,
     summary: useDocumentsSummary,
     urgentWhenBadged: true,
-  },
-  {
-    // Shortcut into Văn thư; the Văn thư tile already carries the "chờ phân phối + chờ xử lý" count, so no badge here.
-    id: 'incoming-documents',
-    group: 'document',
-    labelKey: 'incomingDocuments',
-    icon: FileDownIcon,
-    route: '/documents/incoming',
-    permission: { app: 'VANTHU' },
-    summary: useIncomingDocsSummary,
-  },
-  {
-    id: 'shared-documents',
-    group: 'document',
-    labelKey: 'sharedDocuments',
-    icon: Share2Icon,
-    route: '/documents/shared',
-    permission: { app: 'VANTHU' },
-    badge: useSharedDocsUnread,
-    summary: useSharedDocsSummary,
   },
 ];

@@ -3,4 +3,5 @@
 
 export { GuestCheckInScreen } from './screens/GuestCheckInScreen';
 export { GuestCheckInSuccessScreen } from './screens/GuestCheckInSuccessScreen';
+export { GuestDashboardScreen } from './screens/GuestDashboardScreen';
 export { GuestScanScreen } from './screens/GuestScanScreen';
